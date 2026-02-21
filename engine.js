@@ -62,7 +62,16 @@ const Engine = (() => {
       productiveMins: 0,
       relaxMins: 0,
 
-      activityMeta: defaultActivityMeta()
+      activityMeta: defaultActivityMeta(),
+
+      // NEW: last delta (for UI money movement)
+      lastDelta: {
+        atMs: 0,
+        minutes: 0,
+        earned: 0,
+        burned: 0,
+        net: 0
+      }
     };
   }
 
@@ -98,6 +107,7 @@ const Engine = (() => {
     return s;
   }
 
+  // Fallback classifier so every activity has meaning
   function getMeta(s, act) {
     if (s.activityMeta && s.activityMeta[act]) return s.activityMeta[act];
 
@@ -156,6 +166,15 @@ const Engine = (() => {
     s.balance += earned;
     s.balance -= burned;
 
+    const net = earned - burned;
+    s.lastDelta = {
+      atMs: Date.now(),
+      minutes,
+      earned,
+      burned,
+      net
+    };
+
     recomputeMultiplier(s);
   }
 
@@ -176,11 +195,15 @@ const Engine = (() => {
 
     const durationMin = (nowMs - s.currentSession.startMs) / 60000;
 
+    // include delta snapshot for analytics later
+    const delta = s.lastDelta ? { ...s.lastDelta } : { atMs: nowMs, minutes: 0, earned: 0, burned: 0, net: 0 };
+
     s.sessions.push({
       startMs: s.currentSession.startMs,
       endMs: nowMs,
       durationMin,
-      active: s.currentSession.active
+      active: s.currentSession.active,
+      delta
     });
 
     if (s.sessions.length > 4000) s.sessions = s.sessions.slice(-4000);
