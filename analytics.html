@@ -2,32 +2,200 @@
 <html>
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Analytics</title>
+  <title>Analytics Wizard</title>
   <link rel="stylesheet" href="theme.css">
+  <style>
+    .wiz-top{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:12px;
+    }
+    .wiz-title{
+      font-weight:900;
+      font-size:18px;
+    }
+    .wiz-step{
+      background:white;
+      border:1px solid var(--border);
+      border-radius:20px;
+      box-shadow:var(--shadow);
+      padding:16px;
+      margin-bottom:12px;
+    }
+    .wiz-kicker{
+      color:var(--muted);
+      font-weight:800;
+      font-size:12px;
+      letter-spacing:.3px;
+      margin-bottom:6px;
+    }
+    .wiz-h{
+      font-weight:900;
+      font-size:18px;
+      margin:0 0 10px;
+    }
+    .wiz-p{
+      margin:0;
+      color:var(--muted);
+      font-weight:800;
+      line-height:1.35;
+      font-size:13px;
+    }
+    .wiz-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+      margin-top:12px;
+    }
+    .mini{
+      background:#f8fafc;
+      border:1px solid var(--border);
+      border-radius:16px;
+      padding:12px;
+    }
+    .mini .v{
+      font-weight:900;
+      font-size:18px;
+    }
+    .mini .l{
+      color:var(--muted);
+      font-weight:800;
+      font-size:12px;
+      margin-top:4px;
+    }
+    .list{
+      margin-top:10px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .row{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      padding:10px 12px;
+      border-radius:16px;
+      border:1px solid var(--border);
+      background:#ffffff;
+    }
+    .row .left{
+      font-weight:900;
+      font-size:13px;
+    }
+    .row .right{
+      font-weight:900;
+      font-size:13px;
+      color:var(--muted);
+      text-align:right;
+      white-space:nowrap;
+    }
+    .barwrap{
+      margin-top:10px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+    .baritem{
+      border:1px solid var(--border);
+      background:#fff;
+      border-radius:16px;
+      padding:10px 12px;
+    }
+    .barhead{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      font-weight:900;
+      font-size:13px;
+    }
+    .bar{
+      margin-top:8px;
+      height:10px;
+      background:#eef2f7;
+      border-radius:999px;
+      overflow:hidden;
+    }
+    .fill{
+      height:100%;
+      width:0%;
+      background:linear-gradient(90deg, #4e8cff, #7dd3fc);
+      border-radius:999px;
+      transition: width .25s ease;
+    }
+    .wiz-controls{
+      position:sticky;
+      bottom:0;
+      background:linear-gradient(180deg, rgba(244,246,248,0), rgba(244,246,248,1) 35%);
+      padding:12px 0 0;
+      margin-top:10px;
+    }
+    .ctrl-row{
+      display:flex;
+      gap:10px;
+    }
+    .btn{
+      flex:1;
+      padding:14px 12px;
+      border-radius:14px;
+      border:1px solid var(--border);
+      background:white;
+      font-weight:900;
+      font-size:14px;
+    }
+    .btn.primary{
+      background:var(--blue);
+      border-color:transparent;
+      color:white;
+    }
+    .dots{
+      display:flex;
+      justify-content:center;
+      gap:6px;
+      margin-top:10px;
+      margin-bottom:6px;
+    }
+    .dot{
+      width:8px;
+      height:8px;
+      border-radius:999px;
+      background:#d1d5db;
+    }
+    .dot.on{ background:var(--blue); }
+    pre{
+      margin:10px 0 0;
+      white-space:pre-wrap;
+      word-break:break-word;
+      font-size:12px;
+      border:1px solid var(--border);
+      background:#f8fafc;
+      padding:12px;
+      border-radius:14px;
+    }
+  </style>
 </head>
 
 <body>
   <div class="app">
-    <a href="index.html" class="menu-link" style="display:inline-block; margin-bottom:12px;">← Back</a>
 
-    <div class="box current" style="margin-bottom:12px;">
-      <div class="value">Analytics</div>
-      <div class="label">Local summary</div>
+    <div class="wiz-top">
+      <a href="index.html" class="menu-link" style="display:inline-block;">← Back</a>
+      <div class="wiz-title">Analytics Wizard</div>
     </div>
 
-    <div class="box" style="margin-bottom:12px;">
-      <div class="value" id="sessionCount">0</div>
-      <div class="label">Sessions Logged</div>
+    <div class="wiz-step" id="wizardStep"></div>
+
+    <div class="wiz-controls">
+      <div class="ctrl-row">
+        <button class="btn" id="backBtn" type="button">Back</button>
+        <button class="btn primary" id="nextBtn" type="button">Next</button>
+      </div>
+      <div class="dots" id="dots"></div>
     </div>
 
-    <div class="box">
-      <div class="value" style="font-size:14px; font-weight:900; text-align:left;">Recent Sessions</div>
-      <pre id="recentSessions" style="margin:10px 0 0; white-space:pre-wrap; font-size:12px; color:#111;"></pre>
-    </div>
   </div>
 
-  <script src="storage.js"></script>
-  <script src="engine.js"></script>
   <script src="analytics.js"></script>
 </body>
 </html>
