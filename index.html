@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>State Tracker</title>
+<link rel="stylesheet" href="theme.css">
+</head>
+
+<body>
+
+<!-- MENU BUTTON -->
+<button id="menuButton" class="menu-btn">☰</button>
+
+<!-- SLIDE PANEL -->
+<div id="menuPanel" class="menu-panel">
+  <h2>How It Works</h2>
+
+  <p><strong>Productive States</strong> earn money per minute.</p>
+  <p><strong>Relax States</strong> burn money per minute.</p>
+
+  <p>
+  Multiplier Formula:
+  <br>
+  1 + (Streak × 0.5) + (Productive Minutes ÷ 180)
+  </p>
+
+  <p>
+  Relax cost is divided by the multiplier.
+  Higher multiplier = cheaper relaxation.
+  </p>
+
+  <p>
+  If Relax minutes exceed Productive minutes,
+  multiplier decreases.
+  </p>
+
+  <p>
+  If you finish a day productive,
+  streak increases.
+  </p>
+
+  <button id="closeMenu">Close</button>
+</div>
+
+<div class="container">
+
+  <div class="card">
+    <h2>Energy</h2>
+    <div id="balance">0</div>
+    <div>Multiplier: <span id="multiplier">1</span>x</div>
+    <div>Streak Days: <span id="streak">0</span></div>
+    <div>Productive Today: <span id="productiveToday">0</span> mins</div>
+    <div>Relax Today: <span id="relaxToday">0</span> mins</div>
+
+    <button id="resetDayBtn">Reset Today</button>
+    <button id="factoryResetBtn">Factory Reset</button>
+  </div>
+
+  <div class="card">
+    <h2>States</h2>
+    <div id="stateButtons" class="button-grid"></div>
+  </div>
+
+  <div class="card">
+    <h2>Recent Activity</h2>
+    <div id="activityFeed" class="export-box"></div>
+  </div>
+
+</div>
+
+<div id="moneyFlowContainer"></div>
+
+<script src="states.js"></script>
+<script src="storage.js"></script>
+<script src="engine.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>
