@@ -1,127 +1,120 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>State Tracker</title>
-  <link rel="stylesheet" href="theme.css">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>State Tracker</title>
+<link rel="stylesheet" href="theme.css">
 </head>
 
 <body>
-  <div class="app">
 
-    <div class="top-row">
-      <div class="status-box balance">
-        <div class="big" id="balanceDisplay">$182.40</div>
-        <div class="label">Balance</div>
-      </div>
+<div class="app">
 
-      <div class="status-box multiplier">
-        <div class="big" id="multiplierDisplay">1.4x</div>
-        <div class="label">Multiplier</div>
-      </div>
+  <!-- TOP STATUS ROW -->
+  <div class="top-row">
 
-      <div class="status-box streak">
-        <div class="big" id="streakDisplay">🔥 3</div>
-        <div class="label">Streak</div>
-      </div>
-
-      <div class="status-box active">
-        <div class="big small" id="currentStatesText">None selected</div>
-        <div class="label">Current States</div>
-      </div>
+    <div class="status-box balance">
+      <div class="big">$82.40</div>
+      <div class="label">Balance</div>
     </div>
 
-    <div class="chips" id="chips"></div>
+    <div class="status-box multiplier">
+      <div class="big">1.4x</div>
+      <div class="label">Multiplier</div>
+    </div>
 
-    <div class="accordion">
+    <div class="status-box streak">
+      <div class="big">🔥 3</div>
+      <div class="label">Streak</div>
+    </div>
 
-      <!-- LOCATION -->
-      <div class="acc-item" data-acc="location">
-        <button class="acc-header" type="button">
-          <span>Location</span>
-          <span class="chev">›</span>
-        </button>
-
-        <div class="acc-body">
-          <div class="swipe-card">
-            <button class="arrow" type="button" data-dir="-1" data-cat="location">‹</button>
-
-            <div class="swipe-center">
-              <div class="swipe-label">Swipe to rotate</div>
-              <div class="swipe-value" id="locationValue">Home</div>
-              <div class="swipe-hint">left / right</div>
-            </div>
-
-            <button class="arrow" type="button" data-dir="1" data-cat="location">›</button>
-          </div>
-
-          <button class="select-btn" type="button" data-select="location">
-            Select Location
-          </button>
-        </div>
-      </div>
-
-      <!-- MOVEMENT -->
-      <div class="acc-item" data-acc="movement">
-        <button class="acc-header" type="button">
-          <span>Movement</span>
-          <span class="chev">›</span>
-        </button>
-
-        <div class="acc-body">
-          <div class="swipe-card">
-            <button class="arrow" type="button" data-dir="-1" data-cat="movement">‹</button>
-
-            <div class="swipe-center">
-              <div class="swipe-label">Swipe to rotate</div>
-              <div class="swipe-value" id="movementValue">Stationary</div>
-              <div class="swipe-hint">left / right</div>
-            </div>
-
-            <button class="arrow" type="button" data-dir="1" data-cat="movement">›</button>
-          </div>
-
-          <button class="select-btn" type="button" data-select="movement">
-            Select Movement
-          </button>
-        </div>
-      </div>
-
-      <!-- ACTIVITY -->
-      <div class="acc-item" data-acc="activity">
-        <button class="acc-header" type="button">
-          <span>Activity</span>
-          <span class="chev">›</span>
-        </button>
-
-        <div class="acc-body">
-          <div class="swipe-card">
-            <button class="arrow" type="button" data-dir="-1" data-cat="activity">‹</button>
-
-            <div class="swipe-center">
-              <div class="swipe-label">Swipe to rotate</div>
-              <div class="swipe-value" id="activityValue">Phone</div>
-              <div class="swipe-hint">left / right</div>
-            </div>
-
-            <button class="arrow" type="button" data-dir="1" data-cat="activity">›</button>
-          </div>
-
-          <div class="row">
-            <button class="select-btn" type="button" data-select="activity">
-              Add Activity
-            </button>
-            <button class="ghost-btn" type="button" id="clearActivity">
-              Clear Activities
-            </button>
-          </div>
-        </div>
-      </div>
-
+    <div class="status-box active">
+      <div class="big small">None selected</div>
+      <div class="label">Current States</div>
     </div>
 
   </div>
 
-  <script src="app.js"></script>
+  <div class="chips"></div>
+
+  <!-- ACCORDION -->
+  <div class="accordion">
+
+    <!-- LOCATION -->
+    <div class="acc-item">
+      <button class="acc-header" type="button">
+        <span>Location</span>
+        <span class="chev">›</span>
+      </button>
+
+      <div class="acc-body">
+        <div class="swipe-card">
+          <button class="arrow">‹</button>
+
+          <div class="swipe-center">
+            <div class="swipe-label">Swipe to rotate</div>
+            <div class="swipe-value">Home</div>
+            <div class="swipe-hint">left / right</div>
+          </div>
+
+          <button class="arrow">›</button>
+        </div>
+
+        <button class="select-btn">Select Location</button>
+      </div>
+    </div>
+
+    <!-- MOVEMENT -->
+    <div class="acc-item">
+      <button class="acc-header" type="button">
+        <span>Movement</span>
+        <span class="chev">›</span>
+      </button>
+
+      <div class="acc-body">
+        <div class="swipe-card">
+          <button class="arrow">‹</button>
+
+          <div class="swipe-center">
+            <div class="swipe-label">Swipe to rotate</div>
+            <div class="swipe-value">Stationary</div>
+            <div class="swipe-hint">left / right</div>
+          </div>
+
+          <button class="arrow">›</button>
+        </div>
+
+        <button class="select-btn">Select Movement</button>
+      </div>
+    </div>
+
+    <!-- ACTIVITY -->
+    <div class="acc-item">
+      <button class="acc-header" type="button">
+        <span>Activity</span>
+        <span class="chev">›</span>
+      </button>
+
+      <div class="acc-body">
+        <div class="swipe-card">
+          <button class="arrow">‹</button>
+
+          <div class="swipe-center">
+            <div class="swipe-label">Swipe to rotate</div>
+            <div class="swipe-value">Phone</div>
+            <div class="swipe-hint">left / right</div>
+          </div>
+
+          <button class="arrow">›</button>
+        </div>
+
+        <button class="select-btn">Add Activity</button>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
 </body>
 </html>
