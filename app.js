@@ -1,148 +1,183 @@
-function renderStates() {
-  const container = document.getElementById("stateButtons");
-  container.innerHTML = "";
+// ===== DATA (layout demo only) =====
+const OPTIONS = {
+  location: ["Home", "Work", "Car", "Out"],
+  movement: ["Stationary", "Walking", "Driving", "Passenger"],
+  activity: ["Phone", "Focused Work", "Media", "Conversation", "Exercise", "Idle"]
+};
 
-  STATE_SECTIONS.forEach(section => {
-    const sectionTitle = document.createElement("h3");
-    sectionTitle.innerText = section.section;
-    sectionTitle.classList.add("section-title");
-    container.appendChild(sectionTitle);
+const indexState = {
+  location: 0,
+  movement: 0,
+  activity: 0
+};
 
-    const sectionGrid = document.createElement("div");
-    sectionGrid.classList.add("button-grid");
+const selected = {
+  location: null,           // single
+  movement: null,           // single
+  activity: new Set()       // multi
+};
 
-    section.items.forEach(state => {
-      const btn = document.createElement("button");
-      btn.classList.add(state.type);
+// ===== UI ELEMENTS =====
+const elLocation = () => document.getElementById("locationValue");
+const elMovement = () => document.getElementById("movementValue");
+const elActivity = () => document.getElementById("activityValue");
+const elCurrentText = () => document.getElementById("currentStatesText");
+const elChips = () => document.getElementById("chips");
 
-      const nameDiv = document.createElement("div");
-      nameDiv.innerText = state.name;
+// ===== HELPERS =====
+function wrapIndex(cat, next) {
+  const len = OPTIONS[cat].length;
+  if (next < 0) return len - 1;
+  if (next >= len) return 0;
+  return next;
+}
 
-      const rateDiv = document.createElement("div");
-      rateDiv.classList.add("rate");
+function getCurrentOption(cat) {
+  return OPTIONS[cat][indexState[cat]];
+}
 
-      updateRateText(rateDiv, state);
+function renderCarouselValues() {
+  elLocation().textContent = getCurrentOption("location");
+  elMovement().textContent = getCurrentOption("movement");
+  elActivity().textContent = getCurrentOption("activity");
+}
 
-      btn.appendChild(nameDiv);
-      btn.appendChild(rateDiv);
+function renderSelected() {
+  const parts = [];
 
-      if (activeStates[state.name]) btn.classList.add("active");
+  if (selected.location) parts.push(selected.location);
+  if (selected.movement) parts.push(selected.movement);
+  if (selected.activity.size) parts.push(...Array.from(selected.activity));
 
-      btn.onclick = () => {
-        if (activeStates[state.name]) {
-          delete activeStates[state.name];
-          btn.classList.remove("active");
-        } else {
-          activeStates[state.name] = true;
-          btn.classList.add("active");
-        }
-        Storage.set("activeStates", activeStates);
-      };
+  elCurrentText().textContent = parts.length ? parts.join(" • ") : "None selected";
 
-      sectionGrid.appendChild(btn);
-    });
-
-    container.appendChild(sectionGrid);
+  // chips
+  elChips().innerHTML = "";
+  parts.forEach(p => {
+    const chip = document.createElement("div");
+    chip.className = "chip";
+    chip.textContent = p;
+    elChips().appendChild(chip);
   });
 }
 
-function updateRateText(rateDiv, state) {
-  if (state.type === "productive") {
-    const earn = Number(state.earn || 0).toFixed(2);
-    rateDiv.innerHTML = `<span class="earn">+${earn}</span> /min`;
+function selectCurrent(cat) {
+  const value = getCurrentOption(cat);
+
+  if (cat === "location") {
+    selected.location = value; // single
   }
 
-  if (state.type === "relax") {
-    const burnBase = Number(state.burn || 0);
-    const realBurn = (burnBase / relaxMultiplier).toFixed(2);
-    rateDiv.innerHTML = `<span class="burn">-${realBurn}</span> /min`;
+  if (cat === "movement") {
+    selected.movement = value; // single
   }
 
-  if (state.type === "neutral") {
-    rateDiv.innerHTML = "";
+  if (cat === "activity") {
+    // multi toggle
+    if (selected.activity.has(value)) selected.activity.delete(value);
+    else selected.activity.add(value);
   }
+
+  renderSelected();
 }
 
-function updateUI() {
-  document.getElementById("balance").innerText = balance.toFixed(2);
-  document.getElementById("multiplier").innerText = relaxMultiplier.toFixed(2);
-  document.getElementById("streak").innerText = streakDays;
-  document.getElementById("productiveToday").innerText = productiveMinutesToday.toFixed(1);
-  document.getElementById("relaxToday").innerText = relaxMinutesToday.toFixed(1);
-  document.getElementById("activityFeed").innerText = activityLog.join("\n");
+function clearActivities() {
+  selected.activity.clear();
+  renderSelected();
+}
 
-  // Update rate text dynamically as multiplier changes
-  document.querySelectorAll(".button-grid button").forEach(btn => {
-    const stateName = btn.firstChild.innerText;
-
-    let found = null;
-    STATE_SECTIONS.forEach(sec => {
-      sec.items.forEach(item => {
-        if (item.name === stateName) found = item;
+// ===== ACCORDION =====
+function setupAccordion() {
+  document.querySelectorAll(".acc-item").forEach(item => {
+    const header = item.querySelector(".acc-header");
+    header.addEventListener("click", () => {
+      // only one open at a time (clean). If you want multiple open, remove this block.
+      document.querySelectorAll(".acc-item").forEach(other => {
+        if (other !== item) other.classList.remove("open");
       });
+      item.classList.toggle("open");
     });
-
-    const rateDiv = btn.querySelector(".rate");
-    if (found && rateDiv) updateRateText(rateDiv, found);
   });
 }
 
-function generateFullReport() {
-  const lifetime = Storage.get("lifetime", {});
-  const stateTotals = Storage.get("stateTotals", {});
-
-  const report = `
-===== STATE TRACKER REPORT =====
-
-Balance: ${balance.toFixed(2)}
-Multiplier: ${relaxMultiplier.toFixed(2)}
-Streak Days: ${streakDays}
-
-Productive Minutes Today: ${productiveMinutesToday.toFixed(2)}
-Relax Minutes Today: ${relaxMinutesToday.toFixed(2)}
-
-Lifetime Totals:
-Total Minutes: ${(lifetime.totalMinutes || 0).toFixed(2)}
-Productive Minutes: ${(lifetime.productiveMinutes || 0).toFixed(2)}
-Relax Minutes: ${(lifetime.relaxMinutes || 0).toFixed(2)}
-Earned: ${(lifetime.earned || 0).toFixed(2)}
-Burned: ${(lifetime.burned || 0).toFixed(2)}
-
-Active States:
-${Object.keys(activeStates).length ? Object.keys(activeStates).join(", ") : "None"}
-
-Last Recorded Day: ${lastRecordedDay}
-
-Recent Activity:
-${activityLog.join("\n")}
-
-Top States (by minutes):
-${Object.entries(stateTotals)
-  .sort((a,b) => (b[1].minutes || 0) - (a[1].minutes || 0))
-  .slice(0, 12)
-  .map(([name, v]) => `${name}: ${(v.minutes || 0).toFixed(2)} min`)
-  .join("\n")}
-`;
-
-  navigator.clipboard.writeText(report)
-    .then(() => alert("Full report copied to clipboard."))
-    .catch(() => alert("Copy failed."));
+// ===== ARROWS =====
+function setupArrows() {
+  document.querySelectorAll(".arrow").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const cat = btn.dataset.cat;
+      const dir = Number(btn.dataset.dir);
+      indexState[cat] = wrapIndex(cat, indexState[cat] + dir);
+      renderCarouselValues();
+    });
+  });
 }
 
+// ===== SWIPE =====
+function setupSwipe() {
+  document.querySelectorAll(".swipe-card").forEach(card => {
+    const cat = card.querySelector(".arrow").dataset.cat;
+
+    let startX = 0;
+    let active = false;
+
+    card.addEventListener("touchstart", (e) => {
+      active = true;
+      startX = e.touches[0].clientX;
+    }, { passive: true });
+
+    card.addEventListener("touchmove", (e) => {
+      if (!active) return;
+      // we are not dragging UI, just detecting
+    }, { passive: true });
+
+    card.addEventListener("touchend", (e) => {
+      if (!active) return;
+      active = false;
+
+      const endX = (e.changedTouches && e.changedTouches[0])
+        ? e.changedTouches[0].clientX
+        : startX;
+
+      const delta = endX - startX;
+
+      // swipe threshold
+      if (Math.abs(delta) < 40) return;
+
+      if (delta < 0) {
+        indexState[cat] = wrapIndex(cat, indexState[cat] + 1);
+      } else {
+        indexState[cat] = wrapIndex(cat, indexState[cat] - 1);
+      }
+
+      renderCarouselValues();
+    });
+  });
+}
+
+// ===== SELECT BUTTONS =====
+function setupSelectButtons() {
+  document.querySelectorAll("[data-select]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const cat = btn.dataset.select;
+      selectCurrent(cat);
+    });
+  });
+
+  const clearBtn = document.getElementById("clearActivity");
+  if (clearBtn) clearBtn.addEventListener("click", clearActivities);
+}
+
+// ===== INIT =====
 document.addEventListener("DOMContentLoaded", () => {
-  renderStates();
-  updateUI();
+  setupAccordion();
+  setupArrows();
+  setupSwipe();
+  setupSelectButtons();
 
-  document.getElementById("resetDayBtn").addEventListener("click", resetToday);
-  document.getElementById("factoryResetBtn").addEventListener("click", factoryReset);
-  document.getElementById("copyDataBtn").addEventListener("click", generateFullReport);
+  renderCarouselValues();
+  renderSelected();
 
-  const menuButton = document.getElementById("menuButton");
-  const menuPanel = document.getElementById("menuPanel");
-  const closeMenu = document.getElementById("closeMenu");
-
-  if (menuButton && menuPanel && closeMenu) {
-    menuButton.addEventListener("click", () => menuPanel.classList.add("open"));
-    closeMenu.addEventListener("click", () => menuPanel.classList.remove("open"));
-  }
+  // start with Location open (feels guided without being a wizard)
+  const first = document.querySelector('[data-acc="location"]');
+  if (first) first.classList.add("open");
 });

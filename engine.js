@@ -1,190 +1,121 @@
-let balance = Number(Storage.get("balance", 0));
-let productiveMinutesToday = Number(Storage.get("productiveToday", 0));
-let relaxMinutesToday = Number(Storage.get("relaxToday", 0));
-let streakDays = Number(Storage.get("streakDays", 0));
-let relaxMultiplier = Number(Storage.get("multiplier", 1));
-let activityLog = Storage.get("activityLog", []);
-let lastRecordedDay = Storage.get("lastRecordedDay", new Date().toDateString());
-let activeStates = Storage.get("activeStates", {});
+// ===== SESSION-BASED ENGINE =====
 
-// NEW: lifetime totals + per-state totals
-let lifetime = Storage.get("lifetime", {
-  totalMinutes: 0,
-  productiveMinutes: 0,
-  relaxMinutes: 0,
-  earned: 0,
-  burned: 0
+let currentSession = Storage.get("currentSession", null);
+let sessions = Storage.get("sessions", []);
+let dailyTotals = Storage.get("dailyTotals", {
+  date: new Date().toDateString(),
+  productive: 0,
+  relax: 0
 });
 
-let stateTotals = Storage.get("stateTotals", {
-  // name: { minutes: 0, earned: 0, burned: 0, productiveMinutes: 0, relaxMinutes: 0 }
-});
+// ===== START SESSION =====
+function startSession(data) {
 
-let lastTick = Date.now();
-
-// ===== FLOATING MONEY EFFECT =====
-function showMoneyFlow(amount, type) {
-  const container = document.getElementById("moneyFlowContainer");
-  if (!container) return;
-
-  const pop = document.createElement("div");
-  pop.classList.add("money-pop");
-
-  if (type === "earn") {
-    pop.classList.add("money-earn");
-    pop.innerText = `+$${amount.toFixed(2)}`;
-  } else {
-    pop.classList.add("money-burn");
-    pop.innerText = `-$${amount.toFixed(2)}`;
+  if (currentSession) {
+    endSession();
   }
 
-  container.appendChild(pop);
-  setTimeout(() => pop.remove(), 1400);
+  currentSession = {
+    ...data,
+    startTime: Date.now()
+  };
+
+  Storage.set("currentSession", currentSession);
 }
 
-// ===== MAIN TICK ENGINE =====
-function tick() {
-  checkDailyRollover();
+// ===== END SESSION =====
+function endSession() {
 
-  const now = Date.now();
-  const minutes = (now - lastTick) / 60000;
-  lastTick = now;
+  if (!currentSession) return;
 
-  STATES.forEach(state => {
-    if (!activeStates[state.name]) return;
+  const endTime = Date.now();
+  const durationMinutes =
+    (endTime - currentSession.startTime) / 60000;
 
-    ensureStateTotals(state.name);
+  const record = {
+    ...currentSession,
+    endTime,
+    durationMinutes
+  };
 
-    if (state.type === "productive") {
-      productiveMinutesToday += minutes;
+  sessions.push(record);
 
-      const earned = minutes * (state.earn || 0);
-      balance += earned;
-
-      // lifetime + per-state analytics
-      lifetime.totalMinutes += minutes;
-      lifetime.productiveMinutes += minutes;
-      lifetime.earned += earned;
-
-      stateTotals[state.name].minutes += minutes;
-      stateTotals[state.name].productiveMinutes += minutes;
-      stateTotals[state.name].earned += earned;
-
-      showMoneyFlow(earned, "earn");
-
-      // multiplier growth
-      relaxMultiplier = 1 + (streakDays * 0.5) + (productiveMinutesToday / 180);
-
-      logActivity(`+${earned.toFixed(2)} from ${state.name}`);
-    }
-
-    if (state.type === "relax") {
-      relaxMinutesToday += minutes;
-
-      const burnRate = (state.burn || 0) / relaxMultiplier;
-      const burned = minutes * burnRate;
-
-      balance -= burned;
-
-      // lifetime + per-state analytics
-      lifetime.totalMinutes += minutes;
-      lifetime.relaxMinutes += minutes;
-      lifetime.burned += burned;
-
-      stateTotals[state.name].minutes += minutes;
-      stateTotals[state.name].relaxMinutes += minutes;
-      stateTotals[state.name].burned += burned;
-
-      showMoneyFlow(burned, "burn");
-
-      logActivity(`-${burned.toFixed(2)} from ${state.name}`);
-    }
-
-    // neutral states currently do not affect totals or balance
-  });
-
-  checkPenalty();
-  saveAll();
-  updateUI();
-}
-
-function ensureStateTotals(name) {
-  if (!stateTotals[name]) {
-    stateTotals[name] = {
-      minutes: 0,
-      productiveMinutes: 0,
-      relaxMinutes: 0,
-      earned: 0,
-      burned: 0
-    };
+  if (currentSession.type === "productive") {
+    dailyTotals.productive += durationMinutes;
   }
-}
 
-// ===== PENALTY SYSTEM =====
-function checkPenalty() {
-  if (relaxMinutesToday > productiveMinutesToday) {
-    relaxMultiplier *= 0.9;
-    if (relaxMultiplier < 1) relaxMultiplier = 1;
-    logActivity("Penalty Applied");
+  if (currentSession.type === "relax") {
+    dailyTotals.relax += durationMinutes;
   }
+
+  currentSession = null;
+
+  Storage.set("sessions", sessions);
+  Storage.set("currentSession", null);
+  Storage.set("dailyTotals", dailyTotals);
 }
 
 // ===== DAILY ROLLOVER =====
 function checkDailyRollover() {
+
   const today = new Date().toDateString();
 
-  if (today !== lastRecordedDay) {
-    if (productiveMinutesToday > relaxMinutesToday) {
-      streakDays++;
-      logActivity("Streak +1 (Productive Day)");
-    } else {
-      relaxMultiplier *= 0.7;
-      if (relaxMultiplier < 1) relaxMultiplier = 1;
-      logActivity("Day Penalty Applied");
-    }
+  if (dailyTotals.date !== today) {
 
-    productiveMinutesToday = 0;
-    relaxMinutesToday = 0;
-    lastRecordedDay = today;
+    const history = Storage.get("history", []);
+    history.push(dailyTotals);
+    Storage.set("history", history);
 
-    Storage.set("lastRecordedDay", today);
+    dailyTotals = {
+      date: today,
+      productive: 0,
+      relax: 0
+    };
+
+    Storage.set("dailyTotals", dailyTotals);
   }
 }
 
-// ===== ACTIVITY LOGGER =====
-function logActivity(message) {
-  activityLog.unshift(`${new Date().toLocaleTimeString()} - ${message}`);
-  if (activityLog.length > 15) activityLog.pop();
+// ===== LIVE TOTALS =====
+function getLiveDailyTotals() {
+
+  checkDailyRollover();
+
+  let productive = dailyTotals.productive;
+  let relax = dailyTotals.relax;
+
+  if (currentSession) {
+
+    const extra =
+      (Date.now() - currentSession.startTime) / 60000;
+
+    if (currentSession.type === "productive") {
+      productive += extra;
+    }
+
+    if (currentSession.type === "relax") {
+      relax += extra;
+    }
+  }
+
+  return { productive, relax };
 }
 
-// ===== SAVE STATE =====
-function saveAll() {
-  Storage.set("balance", balance);
-  Storage.set("productiveToday", productiveMinutesToday);
-  Storage.set("relaxToday", relaxMinutesToday);
-  Storage.set("streakDays", streakDays);
-  Storage.set("multiplier", relaxMultiplier);
-  Storage.set("activityLog", activityLog);
-  Storage.set("activeStates", activeStates);
+// ===== RESUME CHECK =====
+function resumeSessionIfExists() {
 
-  // analytics storage
-  Storage.set("lifetime", lifetime);
-  Storage.set("stateTotals", stateTotals);
+  if (!currentSession) return;
+
+  const minutesRunning =
+    (Date.now() - currentSession.startTime) / 60000;
+
+  if (minutesRunning > 180) {
+    const still = confirm(
+      "You've been in this state over 3 hours.\nStill doing it?"
+    );
+
+    if (!still) {
+      endSession();
+    }
+  }
 }
-
-// ===== RESET =====
-function resetToday() {
-  productiveMinutesToday = 0;
-  relaxMinutesToday = 0;
-  logActivity("Manual Day Reset");
-  saveAll();
-  updateUI();
-}
-
-function factoryReset() {
-  if (!confirm("Erase ALL data?")) return;
-  Storage.clearAll();
-  location.reload();
-}
-
-setInterval(tick, 5000);

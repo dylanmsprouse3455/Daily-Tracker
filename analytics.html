@@ -18,16 +18,22 @@
 
   <div class="card">
     <h2>Time Distribution</h2>
-    <div class="bar-container">
-      <div id="productiveBar" class="bar productive-bar"></div>
-      <div id="relaxBar" class="bar relax-bar"></div>
+    <div class="bar-wrapper">
+      <div class="bar-track">
+        <div id="dominantBar" class="bar-fill productive-bar"></div>
+      </div>
     </div>
     <div id="distributionText"></div>
   </div>
 
   <div class="card">
-    <h2>Top States</h2>
+    <h2>Top Primary States</h2>
     <div id="topStatesContainer"></div>
+  </div>
+
+  <div class="card">
+    <h2>Top Combos (Primary + Modifiers)</h2>
+    <div id="topCombosContainer"></div>
   </div>
 
   <div class="card">
@@ -37,13 +43,12 @@
   </div>
 
   <div class="card">
-    <button onclick="window.location.href='index.html'">
-      Back to Dashboard
-    </button>
+    <button onclick="window.location.href='index.html'">Back</button>
   </div>
 
 </div>
 
+<script src="states.js"></script>
 <script src="storage.js"></script>
 <script src="analytics.js"></script>
 

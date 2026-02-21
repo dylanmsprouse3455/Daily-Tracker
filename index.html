@@ -1,89 +1,127 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>State Tracker</title>
-<link rel="stylesheet" href="theme.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>State Tracker</title>
+  <link rel="stylesheet" href="theme.css">
 </head>
 
 <body>
+  <div class="app">
 
-<!-- MENU BUTTON -->
-<button id="menuButton" class="menu-btn">☰</button>
+    <div class="top-row">
+      <div class="status-box balance">
+        <div class="big" id="balanceDisplay">$182.40</div>
+        <div class="label">Balance</div>
+      </div>
 
-<!-- RULES PANEL -->
-<div id="menuPanel" class="menu-panel">
-  <h2>How It Works</h2>
+      <div class="status-box multiplier">
+        <div class="big" id="multiplierDisplay">1.4x</div>
+        <div class="label">Multiplier</div>
+      </div>
 
-  <p><strong>Productive States</strong> earn money per minute.</p>
-  <p><strong>Relax States</strong> burn money per minute.</p>
+      <div class="status-box streak">
+        <div class="big" id="streakDisplay">🔥 3</div>
+        <div class="label">Streak</div>
+      </div>
 
-  <p>
-  Multiplier Formula:
-  <br>
-  1 + (Streak × 0.5) + (Productive Minutes ÷ 180)
-  </p>
+      <div class="status-box active">
+        <div class="big small" id="currentStatesText">None selected</div>
+        <div class="label">Current States</div>
+      </div>
+    </div>
 
-  <p>
-  Relax cost is divided by the multiplier.
-  Higher multiplier = cheaper relaxation.
-  </p>
+    <div class="chips" id="chips"></div>
 
-  <p>
-  If Relax minutes exceed Productive minutes,
-  multiplier decreases.
-  </p>
+    <div class="accordion">
 
-  <p>
-  If you finish a day productive,
-  streak increases.
-  </p>
+      <!-- LOCATION -->
+      <div class="acc-item" data-acc="location">
+        <button class="acc-header" type="button">
+          <span>Location</span>
+          <span class="chev">›</span>
+        </button>
 
-  <button id="closeMenu">Close</button>
-</div>
+        <div class="acc-body">
+          <div class="swipe-card">
+            <button class="arrow" type="button" data-dir="-1" data-cat="location">‹</button>
 
-<div class="container">
+            <div class="swipe-center">
+              <div class="swipe-label">Swipe to rotate</div>
+              <div class="swipe-value" id="locationValue">Home</div>
+              <div class="swipe-hint">left / right</div>
+            </div>
 
-  <!-- ENERGY CARD -->
-  <div class="card">
-    <h2>Energy</h2>
+            <button class="arrow" type="button" data-dir="1" data-cat="location">›</button>
+          </div>
 
-    <div id="balance">0</div>
-    <div>Multiplier: <span id="multiplier">1</span>x</div>
-    <div>Streak Days: <span id="streak">0</span></div>
-    <div>Productive Today: <span id="productiveToday">0</span> mins</div>
-    <div>Relax Today: <span id="relaxToday">0</span> mins</div>
+          <button class="select-btn" type="button" data-select="location">
+            Select Location
+          </button>
+        </div>
+      </div>
 
-    <button id="resetDayBtn">Reset Today</button>
-    <button id="factoryResetBtn">Factory Reset</button>
-    <button id="copyDataBtn">Copy Full Report</button>
+      <!-- MOVEMENT -->
+      <div class="acc-item" data-acc="movement">
+        <button class="acc-header" type="button">
+          <span>Movement</span>
+          <span class="chev">›</span>
+        </button>
 
-    <button onclick="window.location.href='analytics.html'">
-      View Analytics
-    </button>
+        <div class="acc-body">
+          <div class="swipe-card">
+            <button class="arrow" type="button" data-dir="-1" data-cat="movement">‹</button>
+
+            <div class="swipe-center">
+              <div class="swipe-label">Swipe to rotate</div>
+              <div class="swipe-value" id="movementValue">Stationary</div>
+              <div class="swipe-hint">left / right</div>
+            </div>
+
+            <button class="arrow" type="button" data-dir="1" data-cat="movement">›</button>
+          </div>
+
+          <button class="select-btn" type="button" data-select="movement">
+            Select Movement
+          </button>
+        </div>
+      </div>
+
+      <!-- ACTIVITY -->
+      <div class="acc-item" data-acc="activity">
+        <button class="acc-header" type="button">
+          <span>Activity</span>
+          <span class="chev">›</span>
+        </button>
+
+        <div class="acc-body">
+          <div class="swipe-card">
+            <button class="arrow" type="button" data-dir="-1" data-cat="activity">‹</button>
+
+            <div class="swipe-center">
+              <div class="swipe-label">Swipe to rotate</div>
+              <div class="swipe-value" id="activityValue">Phone</div>
+              <div class="swipe-hint">left / right</div>
+            </div>
+
+            <button class="arrow" type="button" data-dir="1" data-cat="activity">›</button>
+          </div>
+
+          <div class="row">
+            <button class="select-btn" type="button" data-select="activity">
+              Add Activity
+            </button>
+            <button class="ghost-btn" type="button" id="clearActivity">
+              Clear Activities
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
   </div>
 
-  <!-- STATES CARD -->
-  <div class="card">
-    <h2>States</h2>
-    <div id="stateButtons"></div>
-  </div>
-
-  <!-- ACTIVITY CARD -->
-  <div class="card">
-    <h2>Recent Activity</h2>
-    <div id="activityFeed" class="export-box"></div>
-  </div>
-
-</div>
-
-<!-- FLOATING MONEY CONTAINER -->
-<div id="moneyFlowContainer"></div>
-
-<script src="states.js"></script>
-<script src="storage.js"></script>
-<script src="engine.js"></script>
-<script src="app.js"></script>
-
+  <script src="app.js"></script>
 </body>
 </html>

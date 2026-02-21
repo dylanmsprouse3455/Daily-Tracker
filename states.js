@@ -1,50 +1,29 @@
-// Sectioned for UI
-const STATE_SECTIONS = [
-  {
-    section: "Primary",
-    items: [
-      { name: "Work", type: "productive", earn: 1.0, burn: 0 },
-      { name: "Cleaning", type: "productive", earn: 1.2, burn: 0 },
-      { name: "Workout", type: "productive", earn: 1.5, burn: 0 },
-      { name: "Deep Focus", type: "productive", earn: 2.0, burn: 0 },
+const STATES = [
 
-      { name: "Gaming", type: "relax", earn: 0, burn: 1.6 },
-      { name: "TV", type: "relax", earn: 0, burn: 1.2 },
-      { name: "Scrolling", type: "relax", earn: 0, burn: 1.9 },
-      { name: "Bed (Awake)", type: "relax", earn: 0, burn: 1.4 }
-    ]
-  },
+  // Location
+  { name: "Front Room", category: "location", type: "neutral" },
+  { name: "Bedroom", category: "location", type: "neutral" },
+  { name: "Kitchen", category: "location", type: "neutral" },
+  { name: "Car", category: "location", type: "neutral" },
+  { name: "Out", category: "location", type: "neutral" },
 
-  {
-    section: "Location",
-    items: [
-      { name: "Front Room", type: "neutral", earn: 0, burn: 0 },
-      { name: "Bedroom", type: "neutral", earn: 0, burn: 0 },
-      { name: "Kitchen", type: "neutral", earn: 0, burn: 0 },
-      { name: "Car", type: "neutral", earn: 0, burn: 0 },
-      { name: "Out", type: "neutral", earn: 0, burn: 0 }
-    ]
-  },
+  // Productive
+  { name: "Work", category: "primary", type: "productive", earn: 1.0 },
+  { name: "Deep Focus", category: "primary", type: "productive", earn: 2.0 },
+  { name: "Cleaning", category: "primary", type: "productive", earn: 1.2 },
+  { name: "Workout", category: "primary", type: "productive", earn: 1.5 },
+  { name: "Learning", category: "primary", type: "productive", earn: 1.3 },
 
-  {
-    section: "Life",
-    items: [
-      { name: "Shower", type: "neutral", earn: 0, burn: 0 },
-      { name: "Eating", type: "neutral", earn: 0, burn: 0 },
-      { name: "Sleep", type: "neutral", earn: 0, burn: 0 },
-      { name: "Errands", type: "productive", earn: 0.8, burn: 0 },
-      { name: "Planning", type: "productive", earn: 1.1, burn: 0 }
-    ]
-  },
+  // Relax
+  { name: "TV", category: "primary", type: "relax", burn: 1.3 },
+  { name: "Gaming", category: "primary", type: "relax", burn: 1.6 },
+  { name: "Scrolling", category: "primary", type: "relax", burn: 1.9 },
+  { name: "In Bed Awake", category: "primary", type: "relax", burn: 1.4 },
 
-  {
-    section: "Social",
-    items: [
-      { name: "Conversation (Focused)", type: "productive", earn: 1.0, burn: 0 },
-      { name: "Conversation (Casual)", type: "neutral", earn: 0, burn: 0 }
-    ]
-  }
+  // Modifiers
+  { name: "Focused", category: "modifier", type: "neutral" },
+  { name: "Distracted", category: "modifier", type: "neutral" },
+  { name: "Social", category: "modifier", type: "neutral" },
+  { name: "Music On", category: "modifier", type: "neutral" },
+  { name: "Tired", category: "modifier", type: "neutral" }
 ];
-
-// Flat for engine compatibility
-const STATES = STATE_SECTIONS.flatMap(s => s.items);
