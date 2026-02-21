@@ -10,65 +10,16 @@ const UI = (() => {
     ]
   };
 
-  // ===== Activity sections (NEW) =====
   const ACTIVITY_SECTIONS = [
-    {
-      title: "Work",
-      items: [
-        "Focused Work","Deep Work","Emails/Admin","Meetings","Calls (Work)","Planning","Budgeting",
-        "Job Search","Client Work","Paperwork","Scheduling"
-      ]
-    },
-    {
-      title: "Learning",
-      items: [
-        "Learning","Studying","Reading (Learning)","Research","Notes","Practice Drills",
-        "Tutorials","Coding","Drawing Study","Language Practice"
-      ]
-    },
-    {
-      title: "Chores",
-      items: [
-        "Cleaning","Laundry","Dishes","Cooking","Meal Prep","Groceries","Shopping","Errands",
-        "Organizing","Decluttering","Trash","Pets","Car Cleanup","Yard Work"
-      ]
-    },
-    {
-      title: "Health",
-      items: [
-        "Workout","Cardio","Weights","Stretching","Walk (Exercise)","Meditation","Breathwork",
-        "Doctor/Appointment","Therapy","Hygiene","Shower/Get Ready","Skincare","Nap","Sleeping"
-      ]
-    },
-    {
-      title: "Social",
-      items: [
-        "Conversation","Socializing","Hanging Out","Family Time","Dating","Event/Outing",
-        "Phone Call (Personal)","Texting","Community"
-      ]
-    },
-    {
-      title: "Entertainment",
-      items: [
-        "Phone","Scrolling","Media","TV","Gaming","Music","Podcast","YouTube","Movies",
-        "TikTok","Reddit","Streaming","Idle"
-      ]
-    },
-    {
-      title: "Food",
-      items: [
-        "Eating","Cooking (Enjoyment)","Coffee","Restaurant","Snack","Hydrating"
-      ]
-    },
-    {
-      title: "Other",
-      items: [
-        "Waiting","Commuting","Driving","Passenger","Travel","Misc"
-      ]
-    }
+    { title: "Work", items: ["Focused Work","Deep Work","Emails/Admin","Meetings","Calls (Work)","Planning","Budgeting","Paperwork","Scheduling"] },
+    { title: "Learning", items: ["Learning","Studying","Reading (Learning)","Research","Notes","Practice Drills","Tutorials","Coding","Drawing Study","Language Practice"] },
+    { title: "Chores", items: ["Cleaning","Laundry","Dishes","Cooking","Meal Prep","Groceries","Shopping","Errands","Organizing","Decluttering","Trash","Pets","Car Cleanup","Yard Work"] },
+    { title: "Health", items: ["Workout","Cardio","Weights","Stretching","Walk (Exercise)","Meditation","Breathwork","Hygiene","Shower/Get Ready","Skincare","Nap","Sleeping"] },
+    { title: "Social", items: ["Conversation","Socializing","Hanging Out","Family Time","Dating","Event/Outing","Phone Call (Personal)","Texting"] },
+    { title: "Entertainment", items: ["Phone","Scrolling","Media","TV","Gaming","Music","Podcast","YouTube","Movies","TikTok","Reddit","Streaming","Idle"] },
+    { title: "Other", items: ["Eating","Waiting","Commuting","Driving","Passenger","Travel","Misc"] }
   ];
 
-  // For the swipe UI categories
   const categories = ["location","movement","activity"];
 
   let selected = {
@@ -78,7 +29,6 @@ const UI = (() => {
   };
 
   let categoryIndex = 0;
-  let optionIndex = 0;
 
   const catCarousel = document.getElementById("categoryCarousel");
   const optCarousel = document.getElementById("optionCarousel");
@@ -87,6 +37,9 @@ const UI = (() => {
   const activeBar = document.getElementById("activeBar");
   const currentStatesEl = document.getElementById("currentStates");
   const activityPanel = document.getElementById("activityPanel");
+
+  // We will re-use activityPanel for ALL categories (location/movement/activity).
+  // It becomes a “selection panel” that changes depending on the selected category.
 
   function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
   function snap(track, index) {
@@ -114,7 +67,6 @@ const UI = (() => {
     currentStatesEl.textContent = parts.length ? parts.join(" | ") : "None";
   }
 
-  // Show rate label using Engine meta if present, otherwise keyword fallback guess
   function metaForLabel(name) {
     const s = Engine.getState();
     const meta = (s.activityMeta && s.activityMeta[name]) ? s.activityMeta[name] : null;
@@ -156,10 +108,9 @@ const UI = (() => {
         if (cat === "activity") selected.activity.delete(value);
         else selected[cat] = null;
 
-        renderOptionActives();
         updateActiveBar();
         updateSummary();
-        updateActivityPanelVisibility();
+        renderSelectionPanel();
         pushToBrain();
       });
 
@@ -169,15 +120,6 @@ const UI = (() => {
     if (selected.location) addBtn("location", selected.location);
     if (selected.movement) addBtn("movement", selected.movement);
     selected.activity.forEach(v => addBtn("activity", v));
-  }
-
-  function renderOptionActives() {
-    const cat = categories[categoryIndex];
-    [...optTrack.children].forEach(card => {
-      const value = card.textContent;
-      const on = (cat === "activity") ? selected.activity.has(value) : selected[cat] === value;
-      card.classList.toggle("active", on);
-    });
   }
 
   function buildCategories() {
@@ -191,112 +133,151 @@ const UI = (() => {
     snap(catTrack, categoryIndex);
   }
 
-  function loadOptions() {
+  function buildOptionHint() {
     optTrack.innerHTML = "";
     const cat = categories[categoryIndex];
+    const hints =
+      cat === "location" ? ["Tap below to set location (single)"] :
+      cat === "movement" ? ["Tap below to set movement (single)"] :
+      ["Tap below to toggle activities (multi)"];
 
-    // For activity, the swipe options are just a short “hint list”
-    const list = (cat === "activity")
-      ? ["Tap buttons below", "Select multiple", "Use Active Bar to remove"]
-      : DATA[cat];
-
-    list.forEach(opt => {
+    hints.forEach(h => {
       const card = document.createElement("div");
       card.className = "card";
-      card.textContent = opt;
+      card.textContent = h;
       optTrack.appendChild(card);
     });
 
-    optionIndex = 0;
-    snap(optTrack, optionIndex);
-    renderOptionActives();
-    updateActivityPanelVisibility();
+    snap(optTrack, 0);
   }
 
-  function toggleCurrentOption() {
-    const cat = categories[categoryIndex];
-
-    // For activity, we don’t toggle via swipe cards anymore
-    if (cat === "activity") return;
-
-    const card = optTrack.children[optionIndex];
-    if (!card) return;
-
-    const value = card.textContent;
-    selected[cat] = value;
-
-    renderOptionActives();
-    updateActiveBar();
-    updateSummary();
-    pushToBrain();
+  function clearPanel() {
+    if (!activityPanel) return;
+    activityPanel.innerHTML = "";
   }
 
-  function renderActivityButtons() {
+  // ===== MAIN: render a panel for whichever category is active =====
+  function renderSelectionPanel() {
     if (!activityPanel) return;
 
-    activityPanel.innerHTML = "";
+    clearPanel();
+    activityPanel.classList.add("show");
 
-    ACTIVITY_SECTIONS.forEach(section => {
+    const cat = categories[categoryIndex];
+
+    // Helper to create section header (uses your divider CSS if you added it)
+    function addSectionHeader(title, cls) {
+      const sectionWrap = document.createElement("div");
+      sectionWrap.className = "activity-section";
+
       const header = document.createElement("div");
-      header.style.fontWeight = "900";
-      header.style.color = "var(--muted)";
-      header.style.margin = "10px 0 8px";
-      header.style.fontSize = "12px";
-      header.textContent = section.title.toUpperCase();
-      activityPanel.appendChild(header);
+      header.className = "activity-section-title";
 
-      const wrap = document.createElement("div");
-      wrap.className = "activity-grid";
+      const pill = document.createElement("div");
+      pill.className = "pill " + cls;
+      pill.textContent = title;
 
-      section.items.forEach(name => {
+      const line = document.createElement("div");
+      line.className = "line";
+
+      header.appendChild(pill);
+      header.appendChild(line);
+      sectionWrap.appendChild(header);
+
+      activityPanel.appendChild(sectionWrap);
+      return sectionWrap;
+    }
+
+    // Helper button grid
+    function makeGrid() {
+      const grid = document.createElement("div");
+      grid.className = "activity-grid";
+      return grid;
+    }
+
+    // Single-select panel builder
+    function singleSelectList(list, key, sectionTitle, cls) {
+      const section = addSectionHeader(sectionTitle, cls);
+      const grid = makeGrid();
+
+      list.forEach(name => {
         const b = document.createElement("button");
         b.type = "button";
         b.className = "activity-btn";
         b.textContent = name;
 
-        if (selected.activity.has(name)) b.classList.add("active");
-
-        const meta = metaForLabel(name);
-        const pill = document.createElement("span");
-        pill.className = "rate-pill";
-
-        if (meta.type === "productive") {
-          pill.classList.add("pos");
-          pill.textContent = rateText(meta);
-        } else if (meta.type === "relax") {
-          pill.classList.add("neg");
-          pill.textContent = rateText(meta);
-        } else {
-          pill.textContent = "0/m";
-        }
-
-        b.appendChild(pill);
+        const isOn = selected[key] === name;
+        if (isOn) b.classList.add("active");
 
         b.addEventListener("click", () => {
-          if (selected.activity.has(name)) selected.activity.delete(name);
-          else selected.activity.add(name);
-
-          renderActivityButtons();
+          selected[key] = (selected[key] === name) ? null : name;
+          renderSelectionPanel();
           updateActiveBar();
           updateSummary();
           pushToBrain();
         });
 
-        wrap.appendChild(b);
+        grid.appendChild(b);
       });
 
-      activityPanel.appendChild(wrap);
-    });
-  }
+      section.appendChild(grid);
+    }
 
-  function updateActivityPanelVisibility() {
-    if (!activityPanel) return;
-    const cat = categories[categoryIndex];
-    if (cat === "activity") {
-      activityPanel.classList.add("show");
-      renderActivityButtons();
+    // Multi-select activity section builder
+    function activitySections() {
+      ACTIVITY_SECTIONS.forEach(sec => {
+        const cls = sec.title.toLowerCase().replace(/\s+/g, "");
+        const section = addSectionHeader(sec.title, cls);
+
+        const grid = makeGrid();
+
+        sec.items.forEach(name => {
+          const b = document.createElement("button");
+          b.type = "button";
+          b.className = "activity-btn";
+          b.textContent = name;
+
+          if (selected.activity.has(name)) b.classList.add("active");
+
+          const meta = metaForLabel(name);
+          const pill = document.createElement("span");
+          pill.className = "rate-pill";
+
+          if (meta.type === "productive") {
+            pill.classList.add("pos");
+            pill.textContent = rateText(meta);
+          } else if (meta.type === "relax") {
+            pill.classList.add("neg");
+            pill.textContent = rateText(meta);
+          } else {
+            pill.textContent = "0/m";
+          }
+
+          b.appendChild(pill);
+
+          b.addEventListener("click", () => {
+            if (selected.activity.has(name)) selected.activity.delete(name);
+            else selected.activity.add(name);
+
+            renderSelectionPanel();
+            updateActiveBar();
+            updateSummary();
+            pushToBrain();
+          });
+
+          grid.appendChild(b);
+        });
+
+        section.appendChild(grid);
+      });
+    }
+
+    if (cat === "location") {
+      singleSelectList(DATA.location, "location", "Location", "work"); // color class re-used
+    } else if (cat === "movement") {
+      singleSelectList(DATA.movement, "movement", "Movement", "learning");
     } else {
-      activityPanel.classList.remove("show");
+      activitySections();
     }
   }
 
@@ -328,7 +309,7 @@ const UI = (() => {
 
       e.preventDefault();
 
-      const baseIndex = isCategory ? categoryIndex : optionIndex;
+      const baseIndex = isCategory ? categoryIndex : 0;
       const track = isCategory ? catTrack : optTrack;
       track.style.transform = `translateX(calc(-${baseIndex * 100}% + ${dx}px))`;
     }, { passive: false });
@@ -345,34 +326,27 @@ const UI = (() => {
       const tapThreshold = 10;
 
       if (Math.abs(dx) < tapThreshold && Math.abs(dy) < tapThreshold) {
-        if (!isCategory) toggleCurrentOption();
-        snap(isCategory ? catTrack : optTrack, isCategory ? categoryIndex : optionIndex);
+        snap(isCategory ? catTrack : optTrack, isCategory ? categoryIndex : 0);
         return;
       }
 
       if (!axis) axis = (Math.abs(dx) > Math.abs(dy)) ? "x" : "y";
       if (axis !== "x") {
-        snap(isCategory ? catTrack : optTrack, isCategory ? categoryIndex : optionIndex);
+        snap(isCategory ? catTrack : optTrack, isCategory ? categoryIndex : 0);
         return;
       }
 
-      if (dx < -swipeThreshold) {
-        if (isCategory) categoryIndex = clamp(categoryIndex + 1, 0, categories.length - 1);
-        else optionIndex = clamp(optionIndex + 1, 0, optTrack.children.length - 1);
-      } else if (dx > swipeThreshold) {
-        if (isCategory) categoryIndex = clamp(categoryIndex - 1, 0, categories.length - 1);
-        else optionIndex = clamp(optionIndex - 1, 0, optTrack.children.length - 1);
+      if (!isCategory) {
+        snap(optTrack, 0);
+        return;
       }
 
-      if (isCategory) {
-        snap(catTrack, categoryIndex);
-        loadOptions();
-      } else {
-        snap(optTrack, optionIndex);
-      }
+      if (dx < -swipeThreshold) categoryIndex = clamp(categoryIndex + 1, 0, categories.length - 1);
+      else if (dx > swipeThreshold) categoryIndex = clamp(categoryIndex - 1, 0, categories.length - 1);
 
-      updateSummary();
-      updateActiveBar();
+      snap(catTrack, categoryIndex);
+      buildOptionHint();
+      renderSelectionPanel();
     }, { passive: true });
   }
 
@@ -386,10 +360,10 @@ const UI = (() => {
   function init() {
     hydrateFromBrain();
     buildCategories();
-    loadOptions();
+    buildOptionHint();
     updateSummary();
     updateActiveBar();
-    updateActivityPanelVisibility();
+    renderSelectionPanel();
 
     enableSwipeOnCarousel(catCarousel, true);
     enableSwipeOnCarousel(optCarousel, false);
