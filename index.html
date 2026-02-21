@@ -44,6 +44,7 @@
 
 <div class="container">
 
+  <!-- ENERGY CARD -->
   <div class="card">
     <h2>Energy</h2>
 
@@ -56,13 +57,19 @@
     <button id="resetDayBtn">Reset Today</button>
     <button id="factoryResetBtn">Factory Reset</button>
     <button id="copyDataBtn">Copy Full Report</button>
+
+    <button onclick="window.location.href='analytics.html'">
+      View Analytics
+    </button>
   </div>
 
+  <!-- STATES CARD -->
   <div class="card">
     <h2>States</h2>
-    <div id="stateButtons" class="button-grid"></div>
+    <div id="stateButtons"></div>
   </div>
 
+  <!-- ACTIVITY CARD -->
   <div class="card">
     <h2>Recent Activity</h2>
     <div id="activityFeed" class="export-box"></div>
@@ -70,6 +77,7 @@
 
 </div>
 
+<!-- FLOATING MONEY CONTAINER -->
 <div id="moneyFlowContainer"></div>
 
 <script src="states.js"></script>

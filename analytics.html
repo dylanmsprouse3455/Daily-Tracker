@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>State Tracker Analytics</title>
+<link rel="stylesheet" href="theme.css">
+</head>
+
+<body>
+
+<div class="container">
+
+  <div class="card center">
+    <h2>System Overview</h2>
+    <div id="a_balance" class="big-number">$0</div>
+    <div id="a_efficiency"></div>
+  </div>
+
+  <div class="card">
+    <h2>Time Distribution</h2>
+    <div class="bar-container">
+      <div id="productiveBar" class="bar productive-bar"></div>
+      <div id="relaxBar" class="bar relax-bar"></div>
+    </div>
+    <div id="distributionText"></div>
+  </div>
+
+  <div class="card">
+    <h2>Top States</h2>
+    <div id="topStatesContainer"></div>
+  </div>
+
+  <div class="card">
+    <h2>Multiplier & Streak</h2>
+    <div id="a_multiplier"></div>
+    <div id="a_streak"></div>
+  </div>
+
+  <div class="card">
+    <button onclick="window.location.href='index.html'">
+      Back to Dashboard
+    </button>
+  </div>
+
+</div>
+
+<script src="storage.js"></script>
+<script src="analytics.js"></script>
+
+</body>
+</html>
