@@ -1,41 +1,56 @@
-// ===== RENDER STATES =====
+// ===== RENDER STATES (SECTIONED) =====
 
 function renderStates() {
   const container = document.getElementById("stateButtons");
   container.innerHTML = "";
 
-  STATES.forEach(state => {
-    const btn = document.createElement("button");
-    btn.classList.add(state.type);
+  STATES.forEach(section => {
 
-    const nameDiv = document.createElement("div");
-    nameDiv.innerText = state.name;
+    const sectionTitle = document.createElement("h3");
+    sectionTitle.innerText = section.section;
+    sectionTitle.classList.add("section-title");
+    container.appendChild(sectionTitle);
 
-    const rateDiv = document.createElement("div");
-    rateDiv.classList.add("rate");
+    const sectionGrid = document.createElement("div");
+    sectionGrid.classList.add("button-grid");
 
-    updateRateText(rateDiv, state);
+    section.items.forEach(state => {
 
-    btn.appendChild(nameDiv);
-    btn.appendChild(rateDiv);
+      const btn = document.createElement("button");
+      btn.classList.add(state.type);
 
-    if (activeStates[state.name]) {
-      btn.classList.add("active");
-    }
+      const nameDiv = document.createElement("div");
+      nameDiv.innerText = state.name;
 
-    btn.onclick = () => {
+      const rateDiv = document.createElement("div");
+      rateDiv.classList.add("rate");
+
+      updateRateText(rateDiv, state);
+
+      btn.appendChild(nameDiv);
+      btn.appendChild(rateDiv);
+
+      // Restore highlight
       if (activeStates[state.name]) {
-        delete activeStates[state.name];
-        btn.classList.remove("active");
-      } else {
-        activeStates[state.name] = true;
         btn.classList.add("active");
       }
 
-      Storage.set("activeStates", activeStates);
-    };
+      btn.onclick = () => {
+        if (activeStates[state.name]) {
+          delete activeStates[state.name];
+          btn.classList.remove("active");
+        } else {
+          activeStates[state.name] = true;
+          btn.classList.add("active");
+        }
 
-    container.appendChild(btn);
+        Storage.set("activeStates", activeStates);
+      };
+
+      sectionGrid.appendChild(btn);
+    });
+
+    container.appendChild(sectionGrid);
   });
 }
 
@@ -44,11 +59,14 @@ function renderStates() {
 function updateRateText(rateDiv, state) {
   if (state.type === "productive") {
     rateDiv.innerHTML =
-      `<span class="earn">+${state.earn.toFixed(2)}</span> /min`;
+      `<span class="earn">+${state.earn?.toFixed(2) || "0.00"}</span> /min`;
   }
 
   if (state.type === "relax") {
-    const realBurn = (state.burn / relaxMultiplier).toFixed(2);
+    const realBurn = state.burn
+      ? (state.burn / relaxMultiplier).toFixed(2)
+      : "0.00";
+
     rateDiv.innerHTML =
       `<span class="burn">-${realBurn}</span> /min`;
   }
@@ -79,13 +97,24 @@ function updateUI() {
   document.getElementById("activityFeed").innerText =
     activityLog.join("\n");
 
+  // Update dynamic burn/earn display
   document.querySelectorAll(".button-grid button").forEach(btn => {
     const stateName = btn.firstChild.innerText;
-    const state = STATES.find(s => s.name === stateName);
+
+    let stateObj = null;
+
+    STATES.forEach(section => {
+      section.items.forEach(item => {
+        if (item.name === stateName) {
+          stateObj = item;
+        }
+      });
+    });
+
     const rateDiv = btn.querySelector(".rate");
 
-    if (state && rateDiv) {
-      updateRateText(rateDiv, state);
+    if (stateObj && rateDiv) {
+      updateRateText(rateDiv, stateObj);
     }
   });
 }
