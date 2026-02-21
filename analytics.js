@@ -1,153 +1,85 @@
-function animateMoney(element, target) {
-  let current = 0;
-  const steps = 70;
-  const inc = target / steps;
+function safeParse(x){
+  try { return JSON.parse(x); } catch { return x; }
+}
 
-  let i = 0;
-  const timer = setInterval(() => {
-    i++;
-    current += inc;
-    if (i >= steps) {
-      current = target;
-      clearInterval(timer);
+function dumpStorage(){
+  const out = {};
+  for (let i = 0; i < localStorage.length; i++){
+    const k = localStorage.key(i);
+    out[k] = safeParse(localStorage.getItem(k));
+  }
+  return out;
+}
+
+function minutes(n){
+  return (typeof n === "number" && isFinite(n)) ? n : 0;
+}
+
+function render(){
+  const all = dumpStorage();
+  document.getElementById("rawDump").textContent = JSON.stringify(all, null, 2);
+
+  // We will support BOTH:
+  // A) Future session key: state_tracker_sessions (array)
+  // B) Future brain key: brain_state_v1 (object with sessions)
+  // C) Fallback: just show what exists
+
+  let sessions = [];
+
+  if (Array.isArray(all.state_tracker_sessions)) {
+    sessions = all.state_tracker_sessions;
+  } else if (all.brain_state_v1 && Array.isArray(all.brain_state_v1.sessions)) {
+    sessions = all.brain_state_v1.sessions;
+  }
+
+  document.getElementById("sessionCount").textContent = String(sessions.length);
+
+  // Aggregate totals by "item" (location, movement, activity)
+  const totals = {};
+  let tracked = 0;
+
+  sessions.forEach(s => {
+    const dur = minutes(s.durationMin) || minutes(s.duration) || 0;
+    tracked += dur;
+
+    const a = s.active || s.state || s || {};
+    const loc = a.location;
+    const mov = a.movement;
+    const acts = Array.isArray(a.activity) ? a.activity : [];
+
+    if (loc) totals["Location: " + loc] = (totals["Location: " + loc] || 0) + dur;
+    if (mov) totals["Movement: " + mov] = (totals["Movement: " + mov] || 0) + dur;
+
+    if (acts.length){
+      const share = dur / acts.length;
+      acts.forEach(act => {
+        totals["Activity: " + act] = (totals["Activity: " + act] || 0) + share;
+      });
     }
-    element.innerText = "$" + current.toFixed(2);
-  }, 16);
-}
-
-function makeTopBarRow(labelText, percent) {
-  const wrap = document.createElement("div");
-  wrap.classList.add("top-state");
-
-  const label = document.createElement("div");
-  label.innerText = labelText;
-
-  const bar = document.createElement("div");
-  bar.classList.add("top-bar");
-
-  const fill = document.createElement("div");
-  fill.classList.add("top-bar-fill");
-  bar.appendChild(fill);
-
-  wrap.appendChild(label);
-  wrap.appendChild(bar);
-
-  setTimeout(() => {
-    fill.style.width = Math.max(0, Math.min(100, percent)) + "%";
-  }, 150);
-
-  return wrap;
-}
-
-function loadAnalytics() {
-  const balance = Number(Storage.get("balance", 0));
-  const multiplier = Number(Storage.get("multiplier", 1));
-  const streak = Number(Storage.get("streakDays", 0));
-
-  const lifetime = Storage.get("lifetime", {
-    totalMinutes: 0,
-    productiveMinutes: 0,
-    relaxMinutes: 0,
-    earned: 0,
-    burned: 0
   });
 
-  const stateTotals = Storage.get("stateTotals", {});
-  const comboTotals = Storage.get("comboTotals", {});
+  const entries = Object.entries(totals).sort((a,b)=>b[1]-a[1]);
+  document.getElementById("uniqueStates").textContent = String(entries.length);
+  document.getElementById("trackedMins").textContent = tracked.toFixed(1);
 
-  animateMoney(document.getElementById("a_balance"), balance);
-
-  const total = Number(lifetime.totalMinutes || 0);
-  const net = Number(lifetime.earned || 0) - Number(lifetime.burned || 0);
-  const efficiency = total > 0 ? (net / total) : 0;
-
-  document.getElementById("a_efficiency").innerText =
-    `Net Efficiency: ${efficiency.toFixed(2)} per minute (Earned minus Burned)`;
-
-  const prod = Number(lifetime.productiveMinutes || 0);
-  const relax = Number(lifetime.relaxMinutes || 0);
-  const totalTracked = prod + relax;
-
-  const prodPct = totalTracked > 0 ? (prod / totalTracked) * 100 : 0;
-  const relaxPct = totalTracked > 0 ? (relax / totalTracked) * 100 : 0;
-
-  const bar = document.getElementById("dominantBar");
-  const dominantPct = Math.max(prodPct, relaxPct);
-
-  setTimeout(() => {
-    bar.style.width = dominantPct + "%";
-
-    if (relaxPct > prodPct) {
-      bar.classList.remove("productive-bar");
-      bar.classList.add("relax-dominant");
-    } else {
-      bar.classList.remove("relax-dominant");
-      bar.classList.add("productive-bar");
-    }
-  }, 200);
-
-  document.getElementById("distributionText").innerText =
-    `Productive: ${prodPct.toFixed(1)}% | Relax: ${relaxPct.toFixed(1)}%`;
-
-  document.getElementById("a_multiplier").innerText = `Multiplier: ${multiplier.toFixed(2)}`;
-  document.getElementById("a_streak").innerText = `Streak Days: ${streak}`;
-
-  // Top Primary States
-  const topStatesContainer = document.getElementById("topStatesContainer");
-  topStatesContainer.innerHTML = "";
-
-  const primaryEntries = Object.entries(stateTotals)
-    .map(([id, v]) => ({ id, v }))
-    .filter(x => findStateById(x.id)?.kind === "primary")
-    .sort((a, b) => (b.v.minutes || 0) - (a.v.minutes || 0))
-    .slice(0, 10);
-
-  const maxMin = primaryEntries.length ? (primaryEntries[0].v.minutes || 1) : 1;
-
-  for (const item of primaryEntries) {
-    const s = findStateById(item.id);
-    const mins = Number(item.v.minutes || 0);
-    const earned = Number(item.v.earned || 0);
-    const burned = Number(item.v.burned || 0);
-    const label = `${s?.name || item.id} | ${mins.toFixed(1)} min | +${earned.toFixed(2)} | -${burned.toFixed(2)}`;
-    const pct = (mins / maxMin) * 100;
-    topStatesContainer.appendChild(makeTopBarRow(label, pct));
-  }
-
-  if (!primaryEntries.length) {
-    topStatesContainer.innerText = "No primary data yet. Run a primary state for a minute.";
-  }
-
-  // Top Combos
-  const topCombosContainer = document.getElementById("topCombosContainer");
-  topCombosContainer.innerHTML = "";
-
-  const comboEntries = Object.entries(comboTotals)
-    .map(([k, v]) => ({ k, v }))
-    .sort((a, b) => (b.v.minutes || 0) - (a.v.minutes || 0))
-    .slice(0, 10);
-
-  const maxComboMin = comboEntries.length ? (comboEntries[0].v.minutes || 1) : 1;
-
-  for (const item of comboEntries) {
-    const mins = Number(item.v.minutes || 0);
-    const earned = Number(item.v.earned || 0);
-    const burned = Number(item.v.burned || 0);
-
-    const [primaryId, mods] = item.k.split("::");
-    const primaryName = findStateById(primaryId)?.name || "None";
-    const modNames = (mods && mods !== "none")
-      ? mods.split("|").map(id => findStateById(id)?.name || id).join(", ")
-      : "None";
-
-    const label = `${primaryName} + [${modNames}] | ${mins.toFixed(1)} min | +${earned.toFixed(2)} | -${burned.toFixed(2)}`;
-    const pct = (mins / maxComboMin) * 100;
-    topCombosContainer.appendChild(makeTopBarRow(label, pct));
-  }
-
-  if (!comboEntries.length) {
-    topCombosContainer.innerText = "No combo data yet. Select modifiers and let it run.";
+  const top = entries.slice(0, 8);
+  const topList = document.getElementById("topList");
+  if (!sessions.length){
+    topList.textContent = "No session data yet. Once the brain logs sessions, this fills in automatically.";
+  } else if (!top.length){
+    topList.textContent = "Sessions exist, but no structured state fields found.";
+  } else {
+    topList.innerHTML = top.map(([k,v]) => `${k} — ${v.toFixed(1)}m`).join("<br>");
   }
 }
 
-document.addEventListener("DOMContentLoaded", loadAnalytics);
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("copyRawBtn").addEventListener("click", () => {
+    const txt = document.getElementById("rawDump").textContent;
+    navigator.clipboard.writeText(txt).then(()=>alert("Copied.")).catch(()=>alert("Copy failed."));
+  });
+
+  document.getElementById("refreshBtn").addEventListener("click", render);
+
+  render();
+});
