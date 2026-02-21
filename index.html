@@ -3,118 +3,323 @@
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>State Tracker</title>
-<link rel="stylesheet" href="theme.css">
+
+<style>
+:root{
+  --bg:#f2f4f7;
+  --card:#ffffff;
+  --text:#111;
+  --muted:#6b7280;
+  --blue:#4e8cff;
+  --green:#22c55e;
+  --orange:#fb923c;
+  --purple:#a855f7;
+  --border:#e5e7eb;
+  --shadow: 0 8px 20px rgba(0,0,0,0.06);
+}
+
+*{ box-sizing:border-box; }
+
+body{
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont,sans-serif;
+  background:var(--bg);
+  color:var(--text);
+}
+
+.app{
+  max-width:720px;
+  margin:0 auto;
+  padding:16px;
+}
+
+/* TOP ROW */
+.top-row{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  margin-bottom:16px;
+}
+
+.status-box{
+  background:var(--card);
+  border-radius:16px;
+  padding:14px;
+  box-shadow:var(--shadow);
+  text-align:center;
+  border-top:4px solid transparent;
+}
+
+.balance{ border-top-color:var(--green); }
+.multiplier{ border-top-color:var(--blue); }
+.streak{ border-top-color:var(--orange); }
+.active{ border-top-color:var(--purple); }
+
+.status-box .big{
+  font-size:20px;
+  font-weight:800;
+}
+
+.status-box .big.small{
+  font-size:13px;
+  font-weight:700;
+}
+
+.status-box .label{
+  font-size:12px;
+  color:var(--muted);
+  margin-top:4px;
+}
+
+.chips{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-bottom:16px;
+}
+
+.chip{
+  background:#eef2ff;
+  border:1px solid #dbeafe;
+  color:#1e3a8a;
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:13px;
+  font-weight:700;
+}
+
+/* ACCORDION */
+.accordion{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+.acc-item{
+  background:white;
+  border-radius:16px;
+  box-shadow:var(--shadow);
+  overflow:hidden;
+  border:1px solid var(--border);
+}
+
+.acc-header{
+  width:100%;
+  padding:14px;
+  background:none;
+  border:none;
+  font-size:16px;
+  font-weight:800;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+.acc-body{
+  display:none;
+  padding:14px;
+  border-top:1px solid var(--border);
+}
+
+.acc-item.open .acc-body{
+  display:block;
+}
+
+.chev{
+  font-size:20px;
+  transition:transform .2s;
+}
+
+.acc-item.open .chev{
+  transform:rotate(90deg);
+}
+
+/* SWIPE */
+.swipe-card{
+  display:grid;
+  grid-template-columns:44px 1fr 44px;
+  gap:8px;
+  align-items:center;
+  background:#f8fafc;
+  border-radius:14px;
+  padding:12px;
+  border:1px solid var(--border);
+}
+
+.arrow{
+  height:44px;
+  width:44px;
+  border-radius:12px;
+  border:1px solid var(--border);
+  background:white;
+  font-size:22px;
+}
+
+.swipe-center{
+  text-align:center;
+}
+
+.swipe-value{
+  font-size:22px;
+  font-weight:900;
+}
+
+.select-btn{
+  width:100%;
+  margin-top:12px;
+  padding:12px;
+  border-radius:12px;
+  border:none;
+  background:var(--blue);
+  color:white;
+  font-weight:800;
+}
+</style>
 </head>
 
 <body>
 
 <div class="app">
 
-  <!-- TOP STATUS ROW -->
-  <div class="top-row">
-
-    <div class="status-box balance">
-      <div class="big">$82.40</div>
-      <div class="label">Balance</div>
-    </div>
-
-    <div class="status-box multiplier">
-      <div class="big">1.4x</div>
-      <div class="label">Multiplier</div>
-    </div>
-
-    <div class="status-box streak">
-      <div class="big">🔥 3</div>
-      <div class="label">Streak</div>
-    </div>
-
-    <div class="status-box active">
-      <div class="big small">None selected</div>
-      <div class="label">Current States</div>
-    </div>
-
+<div class="top-row">
+  <div class="status-box balance">
+    <div class="big">$82.40</div>
+    <div class="label">Balance</div>
   </div>
-
-  <div class="chips"></div>
-
-  <!-- ACCORDION -->
-  <div class="accordion">
-
-    <!-- LOCATION -->
-    <div class="acc-item">
-      <button class="acc-header" type="button">
-        <span>Location</span>
-        <span class="chev">›</span>
-      </button>
-
-      <div class="acc-body">
-        <div class="swipe-card">
-          <button class="arrow">‹</button>
-
-          <div class="swipe-center">
-            <div class="swipe-label">Swipe to rotate</div>
-            <div class="swipe-value">Home</div>
-            <div class="swipe-hint">left / right</div>
-          </div>
-
-          <button class="arrow">›</button>
-        </div>
-
-        <button class="select-btn">Select Location</button>
-      </div>
-    </div>
-
-    <!-- MOVEMENT -->
-    <div class="acc-item">
-      <button class="acc-header" type="button">
-        <span>Movement</span>
-        <span class="chev">›</span>
-      </button>
-
-      <div class="acc-body">
-        <div class="swipe-card">
-          <button class="arrow">‹</button>
-
-          <div class="swipe-center">
-            <div class="swipe-label">Swipe to rotate</div>
-            <div class="swipe-value">Stationary</div>
-            <div class="swipe-hint">left / right</div>
-          </div>
-
-          <button class="arrow">›</button>
-        </div>
-
-        <button class="select-btn">Select Movement</button>
-      </div>
-    </div>
-
-    <!-- ACTIVITY -->
-    <div class="acc-item">
-      <button class="acc-header" type="button">
-        <span>Activity</span>
-        <span class="chev">›</span>
-      </button>
-
-      <div class="acc-body">
-        <div class="swipe-card">
-          <button class="arrow">‹</button>
-
-          <div class="swipe-center">
-            <div class="swipe-label">Swipe to rotate</div>
-            <div class="swipe-value">Phone</div>
-            <div class="swipe-hint">left / right</div>
-          </div>
-
-          <button class="arrow">›</button>
-        </div>
-
-        <button class="select-btn">Add Activity</button>
-      </div>
-    </div>
-
+  <div class="status-box multiplier">
+    <div class="big">1.4x</div>
+    <div class="label">Multiplier</div>
   </div>
+  <div class="status-box streak">
+    <div class="big">🔥 3</div>
+    <div class="label">Streak</div>
+  </div>
+  <div class="status-box active">
+    <div class="big small" id="currentStates">None selected</div>
+    <div class="label">Current States</div>
+  </div>
+</div>
+
+<div class="chips" id="chips"></div>
+
+<div class="accordion">
+
+<div class="acc-item">
+  <button class="acc-header">
+    Location <span class="chev">›</span>
+  </button>
+  <div class="acc-body">
+    <div class="swipe-card">
+      <button class="arrow" data-cat="location" data-dir="-1">‹</button>
+      <div class="swipe-center">
+        <div class="swipe-value" id="locationVal">Home</div>
+      </div>
+      <button class="arrow" data-cat="location" data-dir="1">›</button>
+    </div>
+    <button class="select-btn" data-select="location">Select Location</button>
+  </div>
+</div>
+
+<div class="acc-item">
+  <button class="acc-header">
+    Movement <span class="chev">›</span>
+  </button>
+  <div class="acc-body">
+    <div class="swipe-card">
+      <button class="arrow" data-cat="movement" data-dir="-1">‹</button>
+      <div class="swipe-center">
+        <div class="swipe-value" id="movementVal">Stationary</div>
+      </div>
+      <button class="arrow" data-cat="movement" data-dir="1">›</button>
+    </div>
+    <button class="select-btn" data-select="movement">Select Movement</button>
+  </div>
+</div>
+
+<div class="acc-item">
+  <button class="acc-header">
+    Activity <span class="chev">›</span>
+  </button>
+  <div class="acc-body">
+    <div class="swipe-card">
+      <button class="arrow" data-cat="activity" data-dir="-1">‹</button>
+      <div class="swipe-center">
+        <div class="swipe-value" id="activityVal">Phone</div>
+      </div>
+      <button class="arrow" data-cat="activity" data-dir="1">›</button>
+    </div>
+    <button class="select-btn" data-select="activity">Add Activity</button>
+  </div>
+</div>
 
 </div>
+
+</div>
+
+<script>
+const OPTIONS={
+  location:["Home","Work","Car","Out"],
+  movement:["Stationary","Walking","Driving","Passenger"],
+  activity:["Phone","Focused Work","Media","Conversation","Exercise","Idle"]
+};
+
+let indexState={location:0,movement:0,activity:0};
+let selected={location:null,movement:null,activity:new Set()};
+
+function wrap(cat,dir){
+  let len=OPTIONS[cat].length;
+  indexState[cat]=(indexState[cat]+dir+len)%len;
+  document.getElementById(cat+"Val").textContent=
+    OPTIONS[cat][indexState[cat]];
+}
+
+function renderSelected(){
+  let parts=[];
+  if(selected.location) parts.push(selected.location);
+  if(selected.movement) parts.push(selected.movement);
+  selected.activity.forEach(a=>parts.push(a));
+
+  document.getElementById("currentStates").textContent=
+    parts.length?parts.join(" • "):"None selected";
+
+  let chipContainer=document.getElementById("chips");
+  chipContainer.innerHTML="";
+  parts.forEach(p=>{
+    let chip=document.createElement("div");
+    chip.className="chip";
+    chip.textContent=p;
+    chipContainer.appendChild(chip);
+  });
+}
+
+document.querySelectorAll(".arrow").forEach(btn=>{
+  btn.onclick=()=>wrap(btn.dataset.cat,Number(btn.dataset.dir));
+});
+
+document.querySelectorAll("[data-select]").forEach(btn=>{
+  btn.onclick=()=>{
+    let cat=btn.dataset.select;
+    let value=OPTIONS[cat][indexState[cat]];
+    if(cat==="activity"){
+      if(selected.activity.has(value)) selected.activity.delete(value);
+      else selected.activity.add(value);
+    }else{
+      selected[cat]=value;
+    }
+    renderSelected();
+  };
+});
+
+document.querySelectorAll(".acc-header").forEach(header=>{
+  header.onclick=()=>{
+    let item=header.parentElement;
+    document.querySelectorAll(".acc-item").forEach(i=>{
+      if(i!==item) i.classList.remove("open");
+    });
+    item.classList.toggle("open");
+  };
+});
+</script>
 
 </body>
 </html>
