@@ -59,23 +59,68 @@ const UI = (() => {
     Engine.setActive(activeSnapshot());
   }
 
+  function fmtRate(meta, multiplier) {
+    if (!meta) return "0";
+    if (meta.type === "productive") {
+      const r = (typeof meta.earn === "number") ? meta.earn : 1.2;
+      return `+${r.toFixed(1)}/min`;
+    }
+    if (meta.type === "relax") {
+      const r = (typeof meta.burn === "number") ? meta.burn : 1.2;
+      const eff = r / Math.max(1, multiplier || 1);
+      return `-${eff.toFixed(1)}/min`;
+    }
+    return "0";
+  }
+
+  // Mirror Engine fallback so UI can always show something
+  function uiMetaFor(act) {
+    const s = Engine.getState();
+    const metaMap = s.activityMeta || {};
+    if (metaMap[act]) return metaMap[act];
+
+    const a = String(act || "").toLowerCase();
+
+    if (
+      a.includes("phone") || a.includes("scroll") || a.includes("media") ||
+      a.includes("tv") || a.includes("gaming") || a.includes("nap") ||
+      a.includes("sleep") || a.includes("idle") || a.includes("bed")
+    ) return { type: "relax", burn: 1.2 };
+
+    if (
+      a.includes("work") || a.includes("learn") || a.includes("study") ||
+      a.includes("clean") || a.includes("laundry") || a.includes("dish") ||
+      a.includes("cook") || a.includes("shopping") || a.includes("errand") ||
+      a.includes("plan") || a.includes("draw") || a.includes("creative") ||
+      a.includes("read") || a.includes("admin") || a.includes("email") ||
+      a.includes("exercise") || a.includes("workout")
+    ) return { type: "productive", earn: 1.2 };
+
+    return { type: "neutral" };
+  }
+
   function updateSummary() {
     const parts = [];
     if (selected.location) parts.push(selected.location);
     if (selected.movement) parts.push(selected.movement);
     selected.activity.forEach(a => parts.push(a));
-
-    // Use " | " to avoid any encoding weirdness
     currentStatesEl.textContent = parts.length ? parts.join(" | ") : "None";
   }
 
   function updateActiveBar() {
+    const s = Engine.getState();
     activeBar.innerHTML = "";
 
     const addBtn = (cat, value) => {
       const btn = document.createElement("button");
       btn.className = `state-btn ${cat}`;
-      btn.textContent = value;
+
+      if (cat === "activity") {
+        const meta = uiMetaFor(value);
+        btn.textContent = `${value} (${fmtRate(meta, s.multiplier)})`;
+      } else {
+        btn.textContent = value;
+      }
 
       btn.addEventListener("click", () => {
         if (cat === "activity") selected.activity.delete(value);
@@ -98,7 +143,6 @@ const UI = (() => {
 
   function renderOptionActives() {
     const cat = categories[categoryIndex];
-
     [...optTrack.children].forEach(card => {
       const value = card.textContent;
       const on = (cat === "activity") ? selected.activity.has(value) : selected[cat] === value;
@@ -120,7 +164,6 @@ const UI = (() => {
   function loadOptions() {
     optTrack.innerHTML = "";
     const cat = categories[categoryIndex];
-
     DATA[cat].forEach(opt => {
       const card = document.createElement("div");
       card.className = "card";
@@ -158,6 +201,8 @@ const UI = (() => {
   function renderActivityButtons() {
     if (!activityPanel) return;
 
+    const s = Engine.getState();
+
     activityPanel.innerHTML = "";
     const wrap = document.createElement("div");
     wrap.className = "activity-grid";
@@ -166,8 +211,11 @@ const UI = (() => {
       const b = document.createElement("button");
       b.type = "button";
       b.className = "activity-btn";
-      b.textContent = name;
 
+      const meta = uiMetaFor(name);
+      const rate = fmtRate(meta, s.multiplier);
+
+      b.innerHTML = `<span class="ab-name">${name}</span><span class="ab-rate">${rate}</span>`;
       if (selected.activity.has(name)) b.classList.add("active");
 
       b.addEventListener("click", () => {
@@ -301,5 +349,5 @@ const UI = (() => {
     pushToBrain();
   }
 
-  return { init };
+  return { init, renderActivityButtons };
 })();
