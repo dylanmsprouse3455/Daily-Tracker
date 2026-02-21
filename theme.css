@@ -28,12 +28,12 @@ body{
   position: relative;
 }
 
-/* Menu */
+/* ===== MENU ===== */
 .menu-btn{
   position: fixed;
   top: 14px;
   right: 14px;
-  z-index: 50;
+  z-index: 60;
   width: 44px;
   height: 44px;
   border-radius: 14px;
@@ -50,7 +50,7 @@ body{
   opacity: 0;
   pointer-events: none;
   transition: opacity .2s ease;
-  z-index: 60;
+  z-index: 70;
 }
 
 .menu-panel{
@@ -63,14 +63,11 @@ body{
   border-left: 1px solid var(--border);
   box-shadow: -12px 0 30px rgba(0,0,0,0.12);
   transition: right .25s ease;
-  z-index: 70;
+  z-index: 80;
   padding: 14px;
 }
 
-.menu-panel.open{
-  right: 0;
-}
-
+.menu-panel.open{ right: 0; }
 .menu-overlay.open{
   opacity: 1;
   pointer-events: auto;
@@ -137,7 +134,7 @@ body{
   font-size: 12px;
 }
 
-/* DASHBOARD */
+/* ===== DASHBOARD ===== */
 .dashboard{
   display:grid;
   grid-template-columns:1fr 1fr;
@@ -162,13 +159,11 @@ body{
   border-top-color:var(--purple);
   background: linear-gradient(135deg, #f5f3ff, #ffffff);
 }
-.current .value{
-  color:#6d28d9;
-}
+.current .value{ color:#6d28d9; }
 
 .value{
   font-size:20px;
-  font-weight:800;
+  font-weight:900;
 }
 
 .label{
@@ -177,7 +172,7 @@ body{
   margin-top:4px;
 }
 
-/* CAROUSELS */
+/* ===== CAROUSELS ===== */
 .carousel{
   overflow:hidden;
   border-radius:28px;
@@ -206,14 +201,14 @@ body{
 }
 
 .card.active{
-  border:3px solid var(--blue);
+  border:5px solid var(--blue);
   box-shadow:
     0 0 0 6px rgba(78,140,255,0.18),
     0 18px 40px rgba(78,140,255,0.22);
   transform:scale(1.02);
 }
 
-/* ACTIVE BAR */
+/* ===== ACTIVE BAR ===== */
 .active-bar{
   position:fixed;
   bottom:0;
@@ -225,14 +220,14 @@ body{
   display:flex;
   gap:8px;
   overflow-x:auto;
-  z-index: 40;
+  z-index: 20;
 }
 
 .state-btn{
   padding:8px 14px;
   border-radius:999px;
   border:none;
-  font-weight:800;
+  font-weight:900;
   font-size:13px;
   cursor:pointer;
   white-space:nowrap;
@@ -241,3 +236,40 @@ body{
 .state-btn.location{background:#e0f2fe;}
 .state-btn.movement{background:#fef9c3;}
 .state-btn.activity{background:#ede9fe;}
+
+/* ===== ACTIVITY PANEL (NEW) ===== */
+.activity-panel{
+  display:none;
+  margin-top: 2px;
+  padding-bottom: 10px;
+}
+
+.activity-panel.show{
+  display:block;
+}
+
+.activity-grid{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+}
+
+.activity-btn{
+  padding:10px 14px;
+  border-radius:999px;
+  border:1px solid var(--border);
+  background:white;
+  font-weight:900;
+  font-size:13px;
+  cursor:pointer;
+  box-shadow: var(--shadow);
+  transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+
+.activity-btn.active{
+  border:5px solid var(--blue);
+  box-shadow:
+    0 0 0 6px rgba(78,140,255,0.18),
+    0 18px 40px rgba(78,140,255,0.22);
+  transform:scale(1.02);
+}

@@ -1,18 +1,14 @@
 const Engine = (() => {
   const STATE_KEY = "brain_state_v1";
 
-  // ===== CONFIG =====
   const MULT_MIN = 1.0;
   const MULT_MAX = 9.0;
 
-  // Fallback rates if an activity isn't listed
-  const EARN_DEFAULT = 1.2; // productive
-  const BURN_DEFAULT = 1.2; // relax (then divided by multiplier)
+  const EARN_DEFAULT = 1.2;
+  const BURN_DEFAULT = 1.2;
 
-  // Activity classification + per-minute rates (explicit overrides)
   function defaultActivityMeta() {
     return {
-      // Productive
       "Focused Work": { type: "productive", earn: 1.8 },
       "Emails/Admin": { type: "productive", earn: 1.2 },
       "Learning": { type: "productive", earn: 1.4 },
@@ -30,7 +26,6 @@ const Engine = (() => {
       "Creative Project": { type: "productive", earn: 1.2 },
       "Reading": { type: "productive", earn: 1.1 },
 
-      // Relax
       "Phone": { type: "relax", burn: 1.4 },
       "Scrolling": { type: "relax", burn: 1.8 },
       "Media": { type: "relax", burn: 1.3 },
@@ -41,7 +36,6 @@ const Engine = (() => {
       "In Bed Awake": { type: "relax", burn: 1.0 },
       "Idle": { type: "relax", burn: 1.6 },
 
-      // Neutral
       "Conversation": { type: "neutral" },
       "Socializing": { type: "neutral" },
       "Music": { type: "neutral" },
@@ -72,15 +66,9 @@ const Engine = (() => {
     };
   }
 
-  function load() {
-    return Storage.get(STATE_KEY, defaultState());
-  }
-  function save(s) {
-    Storage.set(STATE_KEY, s);
-  }
-  function clamp(n, min, max) {
-    return Math.max(min, Math.min(max, n));
-  }
+  function load() { return Storage.get(STATE_KEY, defaultState()); }
+  function save(s) { Storage.set(STATE_KEY, s); }
+  function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
 
   function recomputeMultiplier(s) {
     const mult = 1 + (s.streak * 0.5) + (s.productiveMins / 180);
@@ -93,7 +81,6 @@ const Engine = (() => {
 
     const now = Date.now();
 
-    // close and reopen session across day boundary
     if (s.currentSession) {
       endCurrentSession(s, now);
       startNewSession(s, now, s.active);
@@ -111,49 +98,25 @@ const Engine = (() => {
     return s;
   }
 
-  // ===== Fallback classifier so every activity has a type =====
   function getMeta(s, act) {
     if (s.activityMeta && s.activityMeta[act]) return s.activityMeta[act];
 
     const a = String(act || "").toLowerCase();
 
-    // Relax keywords
     if (
-      a.includes("phone") ||
-      a.includes("scroll") ||
-      a.includes("media") ||
-      a.includes("tv") ||
-      a.includes("gaming") ||
-      a.includes("nap") ||
-      a.includes("sleep") ||
-      a.includes("idle") ||
-      a.includes("bed")
-    ) {
-      return { type: "relax", burn: BURN_DEFAULT };
-    }
+      a.includes("phone") || a.includes("scroll") || a.includes("media") ||
+      a.includes("tv") || a.includes("gaming") || a.includes("nap") ||
+      a.includes("sleep") || a.includes("idle") || a.includes("bed")
+    ) return { type: "relax", burn: BURN_DEFAULT };
 
-    // Productive keywords
     if (
-      a.includes("work") ||
-      a.includes("learn") ||
-      a.includes("study") ||
-      a.includes("clean") ||
-      a.includes("laundry") ||
-      a.includes("dishes") ||
-      a.includes("cook") ||
-      a.includes("shopping") ||
-      a.includes("errand") ||
-      a.includes("plan") ||
-      a.includes("draw") ||
-      a.includes("creative") ||
-      a.includes("read") ||
-      a.includes("admin") ||
-      a.includes("email") ||
-      a.includes("exercise") ||
-      a.includes("workout")
-    ) {
-      return { type: "productive", earn: EARN_DEFAULT };
-    }
+      a.includes("work") || a.includes("learn") || a.includes("study") ||
+      a.includes("clean") || a.includes("laundry") || a.includes("dish") ||
+      a.includes("cook") || a.includes("shopping") || a.includes("errand") ||
+      a.includes("plan") || a.includes("draw") || a.includes("creative") ||
+      a.includes("read") || a.includes("admin") || a.includes("email") ||
+      a.includes("exercise") || a.includes("workout")
+    ) return { type: "productive", earn: EARN_DEFAULT };
 
     return { type: "neutral" };
   }
@@ -174,16 +137,14 @@ const Engine = (() => {
     acts.forEach(act => {
       const meta = getMeta(s, act);
 
-      if (meta && meta.type === "productive") {
+      if (meta.type === "productive") {
         const rate = (typeof meta.earn === "number") ? meta.earn : EARN_DEFAULT;
         prodMin += share;
         earned += share * rate;
-      } else if (meta && meta.type === "relax") {
+      } else if (meta.type === "relax") {
         const rate = (typeof meta.burn === "number") ? meta.burn : BURN_DEFAULT;
         relaxMin += share;
         burned += share * rate;
-      } else {
-        // neutral
       }
     });
 
@@ -266,7 +227,6 @@ const Engine = (() => {
 
     s.active = activeSnapshot;
 
-    // only start a session if at least 1 activity selected
     if (Array.isArray(activeSnapshot.activity) && activeSnapshot.activity.length) {
       startNewSession(s, now, activeSnapshot);
     } else {
@@ -277,17 +237,9 @@ const Engine = (() => {
     return s;
   }
 
-  function getState() {
-    return tick();
-  }
-
-  function resetAll() {
-    Storage.remove(STATE_KEY);
-  }
-
-  function exportAll() {
-    return getState();
-  }
+  function getState() { return tick(); }
+  function resetAll() { Storage.remove(STATE_KEY); }
+  function exportAll() { return getState(); }
 
   return { setActive, getState, tick, resetAll, exportAll };
 })();

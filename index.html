@@ -1,77 +1,77 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>State Tracker</title>
-  <link rel="stylesheet" href="theme.css">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>State Tracker</title>
+<link rel="stylesheet" href="theme.css">
 </head>
 
 <body>
-  <div class="app">
 
-    <!-- Menu button -->
-    <button class="menu-btn" id="menuBtn" type="button">☰</button>
+<!-- MENU -->
+<button class="menu-btn" id="menuBtn" type="button">☰</button>
+<div class="menu-overlay" id="menuOverlay"></div>
 
-    <!-- Slide menu -->
-    <div class="menu-overlay" id="menuOverlay"></div>
-    <aside class="menu-panel" id="menuPanel" aria-hidden="true">
-      <div class="menu-header">
-        <div class="menu-title">Menu</div>
-        <button class="menu-close" id="menuClose" type="button">✕</button>
-      </div>
-
-      <div class="menu-links">
-        <a class="menu-link" href="analytics.html">Analytics</a>
-        <button class="menu-link-btn" id="copyDataBtn" type="button">Copy Data</button>
-        <button class="menu-link-btn danger" id="factoryResetBtn" type="button">Factory Reset</button>
-      </div>
-
-      <div class="menu-small">
-        This is local-only for now.
-      </div>
-    </aside>
-
-    <!-- DASHBOARD -->
-    <div class="dashboard">
-      <div class="box balance">
-        <div class="value" id="balance">$0</div>
-        <div class="label">Balance</div>
-      </div>
-
-      <div class="box multiplier">
-        <div class="value" id="multiplier">1.0x</div>
-        <div class="label">Multiplier</div>
-      </div>
-
-      <div class="box streak">
-        <div class="value" id="streak">0</div>
-        <div class="label">Streak</div>
-      </div>
-
-      <div class="box current">
-        <div class="value" id="currentStates">None</div>
-        <div class="label">Current</div>
-      </div>
-    </div>
-
-    <!-- CATEGORY SWIPE -->
-    <div class="carousel" id="categoryCarousel">
-      <div class="track" id="categoryTrack"></div>
-    </div>
-
-    <!-- OPTION SWIPE -->
-    <div class="carousel" id="optionCarousel">
-      <div class="track" id="optionTrack"></div>
-    </div>
-
+<aside class="menu-panel" id="menuPanel" aria-hidden="true">
+  <div class="menu-header">
+    <div class="menu-title">Menu</div>
+    <button class="menu-close" id="menuClose" type="button">✕</button>
   </div>
 
-  <!-- Active state bar -->
-  <div class="active-bar" id="activeBar"></div>
+  <div class="menu-links">
+    <a class="menu-link" href="analytics.html">Analytics</a>
+    <button class="menu-link-btn" id="copyDataBtn" type="button">Copy Data</button>
+    <button class="menu-link-btn danger" id="factoryResetBtn" type="button">Factory Reset</button>
+  </div>
 
-  <script src="storage.js"></script>
-  <script src="engine.js"></script>
-  <script src="ui.js"></script>
-  <script src="app.js"></script>
+  <div class="menu-small">Local only. Offline.</div>
+</aside>
+
+<div class="app">
+
+  <div class="dashboard">
+    <div class="box balance">
+      <div class="value" id="balance">$0.00</div>
+      <div class="label">Balance</div>
+    </div>
+
+    <div class="box multiplier">
+      <div class="value" id="multiplier">1.00x</div>
+      <div class="label">Multiplier</div>
+    </div>
+
+    <div class="box streak">
+      <div class="value" id="streak">0</div>
+      <div class="label">Streak</div>
+    </div>
+
+    <div class="box current">
+      <div class="value" id="currentStates">None</div>
+      <div class="label">Current</div>
+    </div>
+  </div>
+
+  <!-- CATEGORY SWIPE -->
+  <div class="carousel" id="categoryCarousel">
+    <div class="track" id="categoryTrack"></div>
+  </div>
+
+  <!-- OPTION SWIPE -->
+  <div class="carousel" id="optionCarousel">
+    <div class="track" id="optionTrack"></div>
+  </div>
+
+  <!-- ACTIVITY BUTTON PANEL (NEW) -->
+  <div id="activityPanel" class="activity-panel"></div>
+
+</div>
+
+<div class="active-bar" id="activeBar"></div>
+
+<script src="storage.js"></script>
+<script src="engine.js"></script>
+<script src="ui.js"></script>
+<script src="app.js"></script>
+
 </body>
 </html>

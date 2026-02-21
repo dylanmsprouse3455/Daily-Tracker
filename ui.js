@@ -1,5 +1,4 @@
 const UI = (() => {
-  // Expanded dataset
   const DATA = {
     location: [
       "Home","Work","Car","Out",
@@ -40,6 +39,7 @@ const UI = (() => {
   const optTrack = document.getElementById("optionTrack");
   const activeBar = document.getElementById("activeBar");
   const currentStatesEl = document.getElementById("currentStates");
+  const activityPanel = document.getElementById("activityPanel");
 
   function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
   function snap(track, index) {
@@ -64,7 +64,9 @@ const UI = (() => {
     if (selected.location) parts.push(selected.location);
     if (selected.movement) parts.push(selected.movement);
     selected.activity.forEach(a => parts.push(a));
-    currentStatesEl.textContent = parts.length ? parts.join(" • ") : "None";
+
+    // Use " | " to avoid any encoding weirdness
+    currentStatesEl.textContent = parts.length ? parts.join(" | ") : "None";
   }
 
   function updateActiveBar() {
@@ -82,6 +84,7 @@ const UI = (() => {
         renderOptionActives();
         updateActiveBar();
         updateSummary();
+        updateActivityPanelVisibility();
         pushToBrain();
       });
 
@@ -95,6 +98,7 @@ const UI = (() => {
 
   function renderOptionActives() {
     const cat = categories[categoryIndex];
+
     [...optTrack.children].forEach(card => {
       const value = card.textContent;
       const on = (cat === "activity") ? selected.activity.has(value) : selected[cat] === value;
@@ -116,6 +120,7 @@ const UI = (() => {
   function loadOptions() {
     optTrack.innerHTML = "";
     const cat = categories[categoryIndex];
+
     DATA[cat].forEach(opt => {
       const card = document.createElement("div");
       card.className = "card";
@@ -126,6 +131,7 @@ const UI = (() => {
     optionIndex = 0;
     snap(optTrack, optionIndex);
     renderOptionActives();
+    updateActivityPanelVisibility();
   }
 
   function toggleCurrentOption() {
@@ -145,7 +151,52 @@ const UI = (() => {
     renderOptionActives();
     updateActiveBar();
     updateSummary();
+    updateActivityPanelVisibility();
     pushToBrain();
+  }
+
+  function renderActivityButtons() {
+    if (!activityPanel) return;
+
+    activityPanel.innerHTML = "";
+    const wrap = document.createElement("div");
+    wrap.className = "activity-grid";
+
+    DATA.activity.forEach(name => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "activity-btn";
+      b.textContent = name;
+
+      if (selected.activity.has(name)) b.classList.add("active");
+
+      b.addEventListener("click", () => {
+        if (selected.activity.has(name)) selected.activity.delete(name);
+        else selected.activity.add(name);
+
+        renderActivityButtons();
+        renderOptionActives();
+        updateActiveBar();
+        updateSummary();
+        pushToBrain();
+      });
+
+      wrap.appendChild(b);
+    });
+
+    activityPanel.appendChild(wrap);
+  }
+
+  function updateActivityPanelVisibility() {
+    if (!activityPanel) return;
+
+    const cat = categories[categoryIndex];
+    if (cat === "activity") {
+      activityPanel.classList.add("show");
+      renderActivityButtons();
+    } else {
+      activityPanel.classList.remove("show");
+    }
   }
 
   function enableSwipeOnCarousel(carousel, isCategory) {
@@ -194,7 +245,6 @@ const UI = (() => {
       const swipeThreshold = 45;
       const tapThreshold = 10;
 
-      // Tap selects options
       if (Math.abs(dx) < tapThreshold && Math.abs(dy) < tapThreshold) {
         if (!isCategory) toggleCurrentOption();
         snap(isCategory ? catTrack : optTrack, isCategory ? categoryIndex : optionIndex);
@@ -202,6 +252,7 @@ const UI = (() => {
       }
 
       if (!axis) axis = (Math.abs(dx) > Math.abs(dy)) ? "x" : "y";
+
       if (axis !== "x") {
         snap(isCategory ? catTrack : optTrack, isCategory ? categoryIndex : optionIndex);
         return;
@@ -221,6 +272,7 @@ const UI = (() => {
       } else {
         snap(optTrack, optionIndex);
         renderOptionActives();
+        updateActivityPanelVisibility();
       }
 
       updateSummary();
@@ -241,11 +293,11 @@ const UI = (() => {
     loadOptions();
     updateSummary();
     updateActiveBar();
+    updateActivityPanelVisibility();
 
     enableSwipeOnCarousel(catCarousel, true);
     enableSwipeOnCarousel(optCarousel, false);
 
-    // Ensure brain starts session if you already have activity selected
     pushToBrain();
   }
 
