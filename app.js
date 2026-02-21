@@ -19,7 +19,6 @@ function renderStates() {
     btn.appendChild(nameDiv);
     btn.appendChild(rateDiv);
 
-    // Restore highlight if active
     if (activeStates[state.name]) {
       btn.classList.add("active");
     }
@@ -80,7 +79,6 @@ function updateUI() {
   document.getElementById("activityFeed").innerText =
     activityLog.join("\n");
 
-  // Update burn values dynamically as multiplier changes
   document.querySelectorAll(".button-grid button").forEach(btn => {
     const stateName = btn.firstChild.innerText;
     const state = STATES.find(s => s.name === stateName);
@@ -92,6 +90,42 @@ function updateUI() {
   });
 }
 
+// ===== FULL REPORT EXPORT =====
+
+function generateFullReport() {
+  const report = `
+===== STATE TRACKER REPORT =====
+
+Balance: ${balance.toFixed(2)}
+Multiplier: ${relaxMultiplier.toFixed(2)}
+Streak Days: ${streakDays}
+
+Productive Minutes Today: ${productiveMinutesToday.toFixed(2)}
+Relax Minutes Today: ${relaxMinutesToday.toFixed(2)}
+
+Active States:
+${Object.keys(activeStates).length > 0
+  ? Object.keys(activeStates).join(", ")
+  : "None"}
+
+Last Recorded Day: ${lastRecordedDay}
+
+Recent Activity:
+${activityLog.join("\n")}
+
+===== RAW STORAGE SNAPSHOT =====
+${JSON.stringify(localStorage, null, 2)}
+`;
+
+  navigator.clipboard.writeText(report)
+    .then(() => {
+      alert("Full report copied to clipboard.");
+    })
+    .catch(() => {
+      alert("Copy failed.");
+    });
+}
+
 // ===== INIT =====
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -99,14 +133,16 @@ document.addEventListener("DOMContentLoaded", () => {
   renderStates();
   updateUI();
 
-  // Reset Buttons
   document.getElementById("resetDayBtn")
     .addEventListener("click", resetToday);
 
   document.getElementById("factoryResetBtn")
     .addEventListener("click", factoryReset);
 
-  // Menu Toggle
+  document.getElementById("copyDataBtn")
+    .addEventListener("click", generateFullReport);
+
+  // MENU TOGGLE
   const menuButton = document.getElementById("menuButton");
   const menuPanel = document.getElementById("menuPanel");
   const closeMenu = document.getElementById("closeMenu");
