@@ -9,14 +9,13 @@
 :root{
   --ink:#0f172a;
   --muted:#64748b;
-  --line:#e2e8f0;
 
   --blue:#cfe9ff;
   --mint:#d9fbe8;
   --pink:#ffe0ef;
   --lav:#efe6ff;
 
-  --radius:26px;
+  --radius:24px;
 }
 
 body{
@@ -91,8 +90,25 @@ body{
   box-shadow:0 6px 16px rgba(0,0,0,.06);
 }
 
-.deltaUp{ color:#16a34a; }
-.deltaDown{ color:#dc2626; }
+.navBar{
+  position:fixed;
+  top:12px;
+  left:12px;
+  right:12px;
+  display:flex;
+  justify-content:space-between;
+  z-index:10;
+}
+
+.navBtn{
+  padding:8px 14px;
+  border-radius:999px;
+  background:#0f172a;
+  color:white;
+  font-weight:700;
+  font-size:13px;
+  border:none;
+}
 
 .dots{
   position:fixed;
@@ -118,6 +134,11 @@ body{
 </head>
 <body>
 
+<div class="navBar">
+  <button class="navBtn" onclick="goBack()">Back</button>
+  <button class="navBtn" onclick="copyAll()">Copy All</button>
+</div>
+
 <div class="slider" id="slider">
 
   <!-- Slide 1 -->
@@ -125,17 +146,17 @@ body{
     <div class="sectionTitle">Today Snapshot</div>
 
     <div class="card mint">
-      <div class="bigNumber" id="prodMin">--</div>
+      <div class="bigNumber" id="prodMin">0</div>
       <div class="sub">Productive Minutes</div>
     </div>
 
     <div class="card pink">
-      <div class="bigNumber" id="relaxMin">--</div>
+      <div class="bigNumber" id="relaxMin">0</div>
       <div class="sub">Relax Minutes</div>
     </div>
 
     <div class="card blue">
-      <div class="bigNumber" id="balance">--</div>
+      <div class="bigNumber" id="balance">0</div>
       <div class="sub">Balance</div>
     </div>
   </div>
@@ -169,20 +190,40 @@ body{
 
 <script>
 function load(){
-  const raw = localStorage.getItem("brain_state_v1");
-  if(!raw) return null;
-  return JSON.parse(raw);
+  try{
+    const raw = localStorage.getItem("brain_state_v1");
+    if(!raw) return null;
+    return JSON.parse(raw);
+  }catch(e){
+    return null;
+  }
 }
 
 function formatMin(n){
-  return (n||0).toFixed(1)+"m";
+  return (Number(n)||0).toFixed(1)+"m";
+}
+
+function goBack(){
+  window.location.href="index.html";
+}
+
+function copyAll(){
+  const raw = localStorage.getItem("brain_state_v1");
+  if(!raw){
+    alert("No data to copy.");
+    return;
+  }
+  navigator.clipboard.writeText(raw)
+    .then(()=>alert("All-time data copied."))
+    .catch(()=>alert("Copy failed."));
 }
 
 function topActivities(sessions){
   const map={};
   sessions.forEach(s=>{
-    const dur=s.durationMin||0;
-    (s.active.activity||[]).forEach(a=>{
+    const dur=Number(s.durationMin)||0;
+    const acts=(s.active && s.active.activity) ? s.active.activity : [];
+    acts.forEach(a=>{
       map[a]=(map[a]||0)+dur;
     });
   });
@@ -192,8 +233,8 @@ function topActivities(sessions){
 function agg(sessions,key){
   const map={};
   sessions.forEach(s=>{
-    const dur=s.durationMin||0;
-    const val=s.active[key];
+    const dur=Number(s.durationMin)||0;
+    const val=s.active ? s.active[key] : null;
     if(!val) return;
     map[val]=(map[val]||0)+dur;
   });
@@ -202,11 +243,14 @@ function agg(sessions,key){
 
 document.addEventListener("DOMContentLoaded",()=>{
   const brain=load();
-  if(!brain) return;
+  if(!brain){
+    alert("No data found.");
+    return;
+  }
 
   document.getElementById("prodMin").textContent=formatMin(brain.productiveMins);
   document.getElementById("relaxMin").textContent=formatMin(brain.relaxMins);
-  document.getElementById("balance").textContent="$"+brain.balance.toFixed(2);
+  document.getElementById("balance").textContent="$"+(brain.balance||0).toFixed(2);
 
   const sessions=brain.sessions||[];
 
@@ -230,7 +274,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   sessions.slice(-5).reverse().forEach(s=>{
     const div=document.createElement("div");
     div.className="pill";
-    div.innerHTML=`<span>${s.active.location}</span><span>${formatMin(s.durationMin)}</span>`;
+    div.innerHTML=`<span>${s.active?.location||"Unknown"}</span><span>${formatMin(s.durationMin)}</span>`;
     recentContainer.appendChild(div);
   });
 
