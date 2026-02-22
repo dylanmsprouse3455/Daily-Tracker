@@ -1,15 +1,19 @@
-// analytics.js (FULL) - self-healing wizard
-// Works even if analytics.html is the old layout.
-// It will CREATE the wizard UI if the required elements don't exist.
+// analytics.js (FULL) - bubbly wizard analytics
+// Shows: Today snapshot, Today vs Yesterday, Today vs Avg/day, Yesterday vs Avg/day, Export
 // Data source: Engine.getState() if present, else localStorage "brain_state_v1"
 
 (() => {
-  /* -------------------- helpers -------------------- */
   const $ = (id) => document.getElementById(id);
 
   function fmtMin(n){
     if (typeof n !== "number" || !isFinite(n)) return "0.0";
     return n.toFixed(1);
+  }
+
+  function signDelta(n){
+    if (!isFinite(n)) n = 0;
+    const sign = n >= 0 ? "+" : "-";
+    return sign + fmtMin(Math.abs(n));
   }
 
   function dayKeyFromMs(ms){
@@ -40,28 +44,24 @@
   function sessionsFromBrain(brain){
     if (!brain) return [];
     if (Array.isArray(brain.sessions)) return brain.sessions;
-    // fallback: sometimes stored as brain.store.sessions etc
     if (brain.store && Array.isArray(brain.store.sessions)) return brain.store.sessions;
     return [];
   }
 
   function normSession(raw){
-    const a = raw.active || raw.state || raw.activeState || {};
-    const startMs = typeof raw.startMs === "number" ? raw.startMs : (typeof raw.start === "number" ? raw.start : null);
+    const a = raw.active || {};
+    const startMs = typeof raw.startMs === "number" ? raw.startMs : null;
     const dayKey = startMs ? dayKeyFromMs(startMs) : "unknown";
-    const durMin =
-      typeof raw.durationMin === "number" ? raw.durationMin :
-      (typeof raw.duration === "number" ? raw.duration : 0);
+
+    const durMin = typeof raw.durationMin === "number" ? raw.durationMin : 0;
 
     const loc = a.location || null;
     const mov = a.movement || null;
-    const acts = Array.isArray(a.activity) ? a.activity : (typeof a.activity === "string" ? [a.activity] : []);
+    const acts = Array.isArray(a.activity) ? a.activity : [];
 
-    const net =
-      raw.delta && typeof raw.delta.net === "number" ? raw.delta.net :
-      (typeof raw.net === "number" ? raw.net : 0);
+    const net = (raw.delta && typeof raw.delta.net === "number") ? raw.delta.net : 0;
 
-    return { dayKey, startMs, durMin: (durMin || 0), loc, mov, acts, net };
+    return { dayKey, startMs, durMin, loc, mov, acts, net };
   }
 
   function groupByDay(rawSessions){
@@ -107,7 +107,7 @@
     return { t, impact };
   }
 
-  // average minutes/day across days where the item appears (best for things like "Work")
+  // avg minutes per day across days where the item appears
   function avgPerDay(byDay, aggFn){
     const days = Object.keys(byDay).filter(k => k !== "unknown");
     const totals = {};
@@ -134,150 +134,10 @@
     return Array.from(set);
   }
 
-  function signDelta(n){
+  function deltaClass(n){
     if (!isFinite(n)) n = 0;
-    return (n >= 0 ? "+" : "-") + fmtMin(Math.abs(n));
-  }
-
-  /* -------------------- UI creation (self-healing) -------------------- */
-  function ensureWizardUI(){
-    // If the wizard exists, use it.
-    if ($("wizTitle") && $("wizContent") && $("wizBack") && $("wizNext") && $("wizStepPill")) {
-      return {
-        title: $("wizTitle"),
-        sub: $("wizSub") || null,
-        content: $("wizContent"),
-        back: $("wizBack"),
-        next: $("wizNext"),
-        pill: $("wizStepPill")
-      };
-    }
-
-    // Otherwise, build it inside the page (works with old analytics.html).
-    const mount = document.querySelector(".pageWrap") || document.body;
-
-    const wrap = document.createElement("div");
-    wrap.style.maxWidth = "820px";
-    wrap.style.margin = "0 auto";
-    wrap.style.padding = "16px";
-
-    // Back row
-    const topRow = document.createElement("div");
-    topRow.style.display = "flex";
-    topRow.style.alignItems = "center";
-    topRow.style.gap = "10px";
-    topRow.style.marginBottom = "12px";
-
-    const backLink = document.createElement("a");
-    backLink.href = "index.html";
-    backLink.className = "btn small ghost";
-    backLink.textContent = "← Back";
-
-    const pill = document.createElement("div");
-    pill.className = "pill";
-    pill.innerHTML = "<span>Analytics</span>";
-
-    topRow.appendChild(backLink);
-    topRow.appendChild(pill);
-
-    // Wizard shell
-    const shell = document.createElement("div");
-    shell.style.border = "1px solid rgba(11,18,32,.10)";
-    shell.style.borderRadius = "28px";
-    shell.style.overflow = "hidden";
-    shell.style.background = "rgba(255,255,255,.86)";
-    shell.style.boxShadow = "0 18px 44px rgba(11,18,32,.12)";
-
-    const head = document.createElement("div");
-    head.style.padding = "16px 16px 12px";
-    head.style.borderBottom = "1px solid rgba(11,18,32,.06)";
-    head.style.background =
-      "radial-gradient(240px 110px at 18% 0%, rgba(110,190,255,.16), transparent 70%)," +
-      "radial-gradient(240px 110px at 82% 0%, rgba(255,140,200,.16), transparent 70%)," +
-      "rgba(255,255,255,.55)";
-
-    const t = document.createElement("div");
-    t.id = "wizTitle";
-    t.style.fontWeight = "950";
-    t.style.fontSize = "20px";
-    t.textContent = "Analytics";
-
-    const s = document.createElement("div");
-    s.id = "wizSub";
-    s.style.marginTop = "6px";
-    s.style.color = "rgba(11,18,32,.62)";
-    s.style.fontSize = "13px";
-    s.style.lineHeight = "1.4";
-    s.textContent = "Loading…";
-
-    head.appendChild(t);
-    head.appendChild(s);
-
-    const content = document.createElement("div");
-    content.id = "wizContent";
-    content.style.padding = "14px 16px";
-    content.style.maxHeight = "64vh";
-    content.style.overflowY = "auto";
-    content.style.webkitOverflowScrolling = "touch";
-
-    const foot = document.createElement("div");
-    foot.style.padding = "12px 16px 16px";
-    foot.style.borderTop = "1px solid rgba(11,18,32,.06)";
-    foot.style.display = "flex";
-    foot.style.justifyContent = "space-between";
-    foot.style.alignItems = "center";
-    foot.style.gap = "10px";
-
-    const backBtn = document.createElement("button");
-    backBtn.id = "wizBack";
-    backBtn.className = "btn ghost";
-    backBtn.type = "button";
-    backBtn.textContent = "Back";
-
-    const stepPill = document.createElement("div");
-    stepPill.id = "wizStepPill";
-    stepPill.style.display = "inline-flex";
-    stepPill.style.alignItems = "center";
-    stepPill.style.gap = "8px";
-    stepPill.style.padding = "8px 10px";
-    stepPill.style.borderRadius = "999px";
-    stepPill.style.border = "1px solid rgba(11,18,32,.10)";
-    stepPill.style.background = "rgba(11,18,32,.04)";
-    stepPill.style.fontSize = "12px";
-    stepPill.style.color = "rgba(11,18,32,.65)";
-    stepPill.style.userSelect = "none";
-    stepPill.textContent = "Step 1/1";
-
-    const nextBtn = document.createElement("button");
-    nextBtn.id = "wizNext";
-    nextBtn.className = "btn";
-    nextBtn.type = "button";
-    nextBtn.textContent = "Next";
-
-    foot.appendChild(backBtn);
-    foot.appendChild(stepPill);
-    foot.appendChild(nextBtn);
-
-    shell.appendChild(head);
-    shell.appendChild(content);
-    shell.appendChild(foot);
-
-    // Clear old content if it exists (pre blocks etc) but keep page usable:
-    // If your analytics page already has a container, we just append our wizard above it.
-    wrap.appendChild(topRow);
-    wrap.appendChild(shell);
-
-    mount.innerHTML = "";
-    mount.appendChild(wrap);
-
-    return {
-      title: t,
-      sub: s,
-      content,
-      back: backBtn,
-      next: nextBtn,
-      pill: stepPill
-    };
+    if (Math.abs(n) < 0.25) return "deltaFlat";
+    return n > 0 ? "deltaUp" : "deltaDown";
   }
 
   function el(tag, cls){
@@ -286,123 +146,110 @@
     return n;
   }
 
-  function card(title, subtitle){
-    const c = el("div");
-    c.style.border = "1px solid rgba(11,18,32,.10)";
-    c.style.borderRadius = "22px";
-    c.style.background = "linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.78))";
-    c.style.boxShadow = "0 10px 26px rgba(11,18,32,.10)";
-    c.style.padding = "14px 14px";
-
-    const h = el("div");
-    h.style.fontWeight = "950";
-    h.style.fontSize = "14px";
-    h.textContent = title;
-
-    const m = el("div");
-    m.style.marginTop = "6px";
-    m.style.color = "rgba(11,18,32,.62)";
-    m.style.fontSize = "12px";
-    m.style.lineHeight = "1.35";
-    m.textContent = subtitle || "";
-
-    c.appendChild(h);
-    if (subtitle) c.appendChild(m);
+  function card(title, meta){
+    const c = el("div","card");
+    const t = el("div","cardTitle"); t.textContent = title;
+    const m = el("div","cardMeta"); m.textContent = meta || "";
+    c.appendChild(t);
+    if (meta) c.appendChild(m);
     return c;
   }
 
-  function tableInto(cardEl, rows){
-    const table = el("div");
-    table.style.marginTop = "10px";
-    table.style.borderTop = "1px solid rgba(11,18,32,.06)";
+  function pillRowItem(name, mins, deltaText, deltaVal){
+    const pill = el("div","itemPill");
 
-    const head = el("div");
-    head.style.display = "grid";
-    head.style.gridTemplateColumns = "1.4fr .7fr .7fr .7fr .7fr .7fr";
-    head.style.gap = "8px";
-    head.style.padding = "8px 0";
-    head.style.borderBottom = "1px solid rgba(11,18,32,.06)";
-    head.style.fontSize = "12px";
-    head.style.fontWeight = "950";
-    head.style.color = "rgba(11,18,32,.75)";
-    head.innerHTML = `
-      <div>Item</div>
-      <div style="text-align:right;">Today</div>
-      <div style="text-align:right;">Yday</div>
-      <div style="text-align:right;">Avg</div>
-      <div style="text-align:right;">T-Avg</div>
-      <div style="text-align:right;">T-Y</div>
-    `;
-    table.appendChild(head);
+    const left = el("div","itemLeft");
+    const nm = el("div","itemName"); nm.textContent = name;
+    const sub = el("div","itemSub"); sub.textContent = `${fmtMin(mins)} min`;
+    left.appendChild(nm);
+    left.appendChild(sub);
 
-    if (!rows.length){
-      const empty = el("div");
-      empty.style.marginTop = "10px";
-      empty.style.color = "rgba(11,18,32,.62)";
-      empty.style.fontSize = "12px";
+    const right = el("div","itemRight");
+    const minB = el("div","minBadge"); minB.textContent = fmtMin(mins) + "m";
+    const delB = el("div","deltaBadge " + deltaClass(deltaVal)); delB.textContent = deltaText;
+
+    right.appendChild(minB);
+    right.appendChild(delB);
+
+    pill.appendChild(left);
+    pill.appendChild(right);
+    return pill;
+  }
+
+  function topList(mapObj, compareMap, compareLabel, limit=6){
+    const keys = mergeKeys(mapObj, compareMap, {});
+    keys.sort((a,b)=> (mapObj[b]||0) - (mapObj[a]||0));
+    const picked = keys.slice(0, limit);
+
+    const wrap = el("div","pillRow");
+    if (!picked.length){
+      const empty = el("div","cardMeta");
       empty.textContent = "No data yet.";
-      cardEl.appendChild(empty);
-      return;
+      wrap.appendChild(empty);
+      return wrap;
     }
 
-    for (const r of rows){
-      const row = el("div");
-      row.style.display = "grid";
-      row.style.gridTemplateColumns = "1.4fr .7fr .7fr .7fr .7fr .7fr";
-      row.style.gap = "8px";
-      row.style.padding = "8px 0";
-      row.style.borderBottom = "1px solid rgba(11,18,32,.06)";
-      row.style.fontSize = "12px";
-      row.innerHTML = `
-        <div>${escapeHtml(r.item)}</div>
-        <div style="text-align:right; font-variant-numeric: tabular-nums;">${fmtMin(r.today)}</div>
-        <div style="text-align:right; font-variant-numeric: tabular-nums;">${fmtMin(r.yday)}</div>
-        <div style="text-align:right; font-variant-numeric: tabular-nums;">${fmtMin(r.avg)}</div>
-        <div style="text-align:right; font-variant-numeric: tabular-nums;">${signDelta(r.dAvg)}</div>
-        <div style="text-align:right; font-variant-numeric: tabular-nums;">${signDelta(r.dY)}</div>
-      `;
-      table.appendChild(row);
+    for (const k of picked){
+      const t = mapObj[k] || 0;
+      const c = compareMap[k] || 0;
+      const d = t - c;
+      wrap.appendChild(
+        pillRowItem(
+          k,
+          t,
+          `${compareLabel} ${signDelta(d)}`,
+          d
+        )
+      );
     }
-
-    cardEl.appendChild(table);
+    return wrap;
   }
 
-  function escapeHtml(s){
-    return String(s ?? "").replace(/[&<>"']/g, (c)=>({
-      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
-    }[c]));
-  }
-
-  function buildRows(todayMap, ydayMap, avgMap, limit=16){
-    const keys = mergeKeys(todayMap, ydayMap, avgMap);
-    keys.sort((a,b)=> (todayMap[b]||0) - (todayMap[a]||0));
-    const out = [];
-    for (const k of keys.slice(0, limit)){
+  function computeBiggestDelta(todayMap, avgMap){
+    const keys = mergeKeys(todayMap, avgMap, {});
+    let best = null;
+    for (const k of keys){
       const t = todayMap[k] || 0;
-      const y = ydayMap[k] || 0;
       const a = avgMap[k] || 0;
-      out.push({ item:k, today:t, yday:y, avg:a, dAvg:t-a, dY:t-y });
+      const d = t - a;
+      if (!best || Math.abs(d) > Math.abs(best.d)) best = { k, t, a, d };
     }
-    return out;
+    return best;
   }
 
-  /* -------------------- main -------------------- */
+  async function copyToClipboard(text){
+    try{
+      await navigator.clipboard.writeText(text);
+      return true;
+    }catch{
+      return false;
+    }
+  }
+
   document.addEventListener("DOMContentLoaded", () => {
-    const ui = ensureWizardUI();
+    const wizTitle = $("wizTitle");
+    const wizSub = $("wizSub");
+    const wizContent = $("wizContent");
+    const wizBack = $("wizBack");
+    const wizNext = $("wizNext");
+    const wizStepPill = $("wizStepPill");
 
     const brain = loadBrain();
     const rawSessions = sessionsFromBrain(brain);
 
     if (!rawSessions.length){
-      ui.title.textContent = "Analytics";
-      if (ui.sub) ui.sub.textContent = "No data yet. Track on the main page first, then come back.";
-      ui.content.innerHTML = "";
-      const c = card("No sessions found", "Go use the main tracker for a minute, then reload analytics.");
-      ui.content.appendChild(c);
-      ui.back.disabled = true;
-      ui.next.textContent = "Go to tracker";
-      ui.pill.textContent = "Step 1/1";
-      ui.next.onclick = () => { window.location.href = "index.html"; };
+      wizTitle.textContent = "Analytics";
+      wizSub.textContent = "No sessions yet. Go track on the main page first.";
+      wizContent.innerHTML = "";
+      const g = el("div","grid");
+      const c = card("No data found", "Track for a bit, then come back here.");
+      g.appendChild(c);
+      wizContent.appendChild(g);
+
+      wizBack.disabled = true;
+      wizNext.textContent = "Go to tracker";
+      wizStepPill.textContent = "Step 1/1";
+      wizNext.onclick = () => window.location.href = "index.html";
       return;
     }
 
@@ -415,153 +262,155 @@
 
     const totalToday = todaySessions.reduce((a,s)=>a+(s.durMin||0), 0);
     const totalYday = ydaySessions.reduce((a,s)=>a+(s.durMin||0), 0);
+
     const dayCount = Object.keys(byDay).filter(k=>k!=="unknown").length;
 
-    // Locations
+    // maps for each dimension
     const locToday = aggByKey(todaySessions, "loc");
     const locY = aggByKey(ydaySessions, "loc");
     const locAvg = avgPerDay(byDay, (ss)=>aggByKey(ss,"loc")).avg;
 
-    // Movement
     const movToday = aggByKey(todaySessions, "mov");
     const movY = aggByKey(ydaySessions, "mov");
     const movAvg = avgPerDay(byDay, (ss)=>aggByKey(ss,"mov")).avg;
 
-    // Activities
-    const actToday = aggActivities(todaySessions).t;
-    const actY = aggActivities(ydaySessions).t;
+    const actTodayObj = aggActivities(todaySessions);
+    const actYObj = aggActivities(ydaySessions);
     const actAvg = avgPerDay(byDay, (ss)=>aggActivities(ss).t).avg;
 
+    // step renderers
     const steps = [
       {
-        name: "Overview",
-        sub: "Today and yesterday totals, and how many days you’ve tracked.",
+        name: "Today snapshot",
+        sub: "A quick, human view of your day so far.",
         render: () => {
-          const wrap = el("div");
-          wrap.style.display = "grid";
-          wrap.style.gridTemplateColumns = "1fr";
-          wrap.style.gap = "12px";
+          const g = el("div","grid");
 
-          const c = card("Totals", `Today (${tk}) vs Yesterday (${yk})`);
-          const meta = el("div");
+          const c1 = card("Today", `Total tracked: ${fmtMin(totalToday)} min`);
+          const meta = el("div","cardMeta");
           meta.style.marginTop = "10px";
-          meta.style.color = "rgba(11,18,32,.75)";
-          meta.style.fontSize = "12px";
-          meta.style.lineHeight = "1.45";
-          meta.innerHTML = `
-            Days tracked: ${dayCount}<br>
-            Today minutes: <b>${fmtMin(totalToday)}</b><br>
-            Yesterday minutes: <b>${fmtMin(totalYday)}</b>
-          `;
-          c.appendChild(meta);
+          meta.textContent = `Yesterday: ${fmtMin(totalYday)} min · Days tracked: ${dayCount}`;
+          c1.appendChild(meta);
+          g.appendChild(c1);
 
-          wrap.appendChild(c);
+          const big = computeBiggestDelta(actTodayObj.t, actAvg);
+          const c2 = card("Biggest change vs your normal", "Compared to your all-time average per day.");
+          if (big){
+            const wrap = el("div","pillRow");
+            wrap.appendChild(
+              pillRowItem(
+                big.k,
+                big.t,
+                `vs Avg ${signDelta(big.d)}`,
+                big.d
+              )
+            );
+            c2.appendChild(wrap);
+          } else {
+            const m = el("div","cardMeta");
+            m.style.marginTop = "10px";
+            m.textContent = "Not enough data yet.";
+            c2.appendChild(m);
+          }
+          g.appendChild(c2);
 
-          const c2 = card("Data source", "Where this page is reading from.");
-          const src = el("div");
-          src.style.marginTop = "10px";
-          src.style.color = "rgba(11,18,32,.75)";
-          src.style.fontSize = "12px";
-          src.innerHTML = `
-            ${typeof Engine !== "undefined" && Engine.getState ? "Engine.getState()" : "localStorage: brain_state_v1"}<br>
-            Sessions in data: <b>${rawSessions.length}</b>
-          `;
-          c2.appendChild(src);
-          wrap.appendChild(c2);
+          const c3 = card("Top activities today", "Compared to yesterday.");
+          c3.appendChild(topList(actTodayObj.t, actYObj.t, "vs Yday", 6));
+          g.appendChild(c3);
 
-          return wrap;
+          return g;
         }
       },
       {
-        name: "Activities",
-        sub: "Minutes per activity: Today vs Yesterday vs your all-time average per day.",
+        name: "Today vs Yesterday",
+        sub: "See what shifted since yesterday.",
         render: () => {
-          const wrap = el("div");
-          wrap.style.display = "grid";
-          wrap.style.gridTemplateColumns = "1fr";
-          wrap.style.gap = "12px";
+          const g = el("div","grid");
 
-          const c = card("Activities", "Shared minutes if multiple activities are set in a session.");
-          const rows = buildRows(actToday, actY, actAvg, 18);
-          tableInto(c, rows);
-          wrap.appendChild(c);
+          const a = card("Activities", "Top items today, delta vs yesterday.");
+          a.appendChild(topList(actTodayObj.t, actYObj.t, "vs Yday", 7));
+          g.appendChild(a);
 
-          return wrap;
+          const l = card("Locations", "Top items today, delta vs yesterday.");
+          l.appendChild(topList(locToday, locY, "vs Yday", 6));
+          g.appendChild(l);
+
+          const m = card("Movement", "Top items today, delta vs yesterday.");
+          m.appendChild(topList(movToday, movY, "vs Yday", 6));
+          g.appendChild(m);
+
+          return g;
         }
       },
       {
-        name: "Locations",
-        sub: "Minutes by location: Today vs Yesterday vs average per day.",
+        name: "Today vs Average",
+        sub: "Compare today to your all-time average per day.",
         render: () => {
-          const wrap = el("div");
-          wrap.style.display = "grid";
-          wrap.style.gridTemplateColumns = "1fr";
-          wrap.style.gap = "12px";
+          const g = el("div","grid");
 
-          const c = card("Locations", "Where your time went.");
-          const rows = buildRows(locToday, locY, locAvg, 14);
-          tableInto(c, rows);
-          wrap.appendChild(c);
+          const a = card("Activities", "Delta vs your all-time avg/day.");
+          a.appendChild(topList(actTodayObj.t, actAvg, "vs Avg", 7));
+          g.appendChild(a);
 
-          return wrap;
+          const l = card("Locations", "Delta vs your all-time avg/day.");
+          l.appendChild(topList(locToday, locAvg, "vs Avg", 6));
+          g.appendChild(l);
+
+          const m = card("Movement", "Delta vs your all-time avg/day.");
+          m.appendChild(topList(movToday, movAvg, "vs Avg", 6));
+          g.appendChild(m);
+
+          return g;
         }
       },
       {
-        name: "Movement",
-        sub: "Minutes by movement: Today vs Yesterday vs average per day.",
+        name: "Yesterday vs Average",
+        sub: "How yesterday compared to your normal.",
         render: () => {
-          const wrap = el("div");
-          wrap.style.display = "grid";
-          wrap.style.gridTemplateColumns = "1fr";
-          wrap.style.gap = "12px";
+          const g = el("div","grid");
 
-          const c = card("Movement", "How you were moving.");
-          const rows = buildRows(movToday, movY, movAvg, 14);
-          tableInto(c, rows);
-          wrap.appendChild(c);
+          const a = card("Activities", "Delta (yesterday minus avg/day).");
+          a.appendChild(topList(actYObj.t, actAvg, "vs Avg", 7));
+          g.appendChild(a);
 
-          return wrap;
+          const l = card("Locations", "Delta (yesterday minus avg/day).");
+          l.appendChild(topList(locY, locAvg, "vs Avg", 6));
+          g.appendChild(l);
+
+          const m = card("Movement", "Delta (yesterday minus avg/day).");
+          m.appendChild(topList(movY, movAvg, "vs Avg", 6));
+          g.appendChild(m);
+
+          return g;
         }
       },
       {
-        name: "Raw export",
-        sub: "If something looks wrong, copy the raw JSON and we’ll inspect it.",
+        name: "Export",
+        sub: "Raw JSON for debugging and sharing.",
         render: () => {
-          const wrap = el("div");
-          wrap.style.display = "grid";
-          wrap.style.gridTemplateColumns = "1fr";
-          wrap.style.gap = "12px";
+          const g = el("div","grid");
 
-          const c = card("Raw JSON", "This is your stored state.");
-          const pre = el("pre");
-          pre.style.whiteSpace = "pre-wrap";
-          pre.style.wordBreak = "break-word";
-          pre.style.margin = "10px 0 0";
-          pre.style.fontSize = "12px";
-          pre.textContent = localStorage.getItem("brain_state_v1") || "(No raw brain_state_v1 found)";
+          const c = card("Raw JSON", "Copy this if something looks off.");
+          const pre = document.createElement("pre");
+          pre.className = "raw";
+          pre.textContent = localStorage.getItem("brain_state_v1") || "(No brain_state_v1 found)";
           c.appendChild(pre);
 
-          const btnRow = el("div");
+          const btnRow = document.createElement("div");
           btnRow.style.display = "flex";
           btnRow.style.gap = "10px";
           btnRow.style.marginTop = "12px";
 
-          const copyBtn = el("button");
+          const copyBtn = document.createElement("button");
           copyBtn.className = "btn small ghost";
           copyBtn.type = "button";
           copyBtn.textContent = "Copy raw JSON";
           copyBtn.onclick = async () => {
-            const raw = localStorage.getItem("brain_state_v1") || "";
-            if(!raw){ alert("No raw JSON found."); return; }
-            try{
-              await navigator.clipboard.writeText(raw);
-              alert("Copied.");
-            }catch{
-              alert("Could not auto-copy on this browser. Long-press and copy manually.");
-            }
+            const ok = await copyToClipboard(pre.textContent || "");
+            if (!ok) alert("Could not auto-copy. Long-press and copy manually.");
           };
 
-          const doneBtn = el("button");
+          const doneBtn = document.createElement("button");
           doneBtn.className = "btn small ghost";
           doneBtn.type = "button";
           doneBtn.textContent = "Back to tracker";
@@ -569,11 +418,10 @@
 
           btnRow.appendChild(copyBtn);
           btnRow.appendChild(doneBtn);
-
           c.appendChild(btnRow);
 
-          wrap.appendChild(c);
-          return wrap;
+          g.appendChild(c);
+          return g;
         }
       }
     ];
@@ -581,23 +429,23 @@
     let idx = 0;
 
     function paint(){
-      ui.title.textContent = steps[idx].name;
-      if (ui.sub) ui.sub.textContent = steps[idx].sub;
+      wizTitle.textContent = steps[idx].name;
+      wizSub.textContent = steps[idx].sub;
 
-      ui.content.innerHTML = "";
-      ui.content.appendChild(steps[idx].render());
+      wizContent.innerHTML = "";
+      wizContent.appendChild(steps[idx].render());
 
-      ui.pill.textContent = `Step ${idx + 1}/${steps.length}`;
-      ui.back.disabled = idx === 0;
-      ui.next.textContent = (idx === steps.length - 1) ? "Done" : "Next";
+      wizStepPill.textContent = `Step ${idx + 1}/${steps.length}`;
+      wizBack.disabled = idx === 0;
+      wizNext.textContent = (idx === steps.length - 1) ? "Done" : "Next";
     }
 
-    ui.back.onclick = () => {
+    wizBack.onclick = () => {
       idx = Math.max(0, idx - 1);
       paint();
     };
 
-    ui.next.onclick = () => {
+    wizNext.onclick = () => {
       if (idx === steps.length - 1){
         window.location.href = "index.html";
         return;
