@@ -1,33 +1,110 @@
+<!-- analytics.html (FULL) -->
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Analytics</title>
-  <link rel="stylesheet" href="theme.css">
+  <link rel="stylesheet" href="theme.css" />
+  <style>
+    /* tiny page-specific layout helpers */
+    .pageWrap{ max-width: 820px; margin: 0 auto; padding: 16px; }
+    .backRow{ display:flex; align-items:center; gap:10px; margin-bottom:12px; }
+    .wizShell{
+      border: 1px solid rgba(11,18,32,.10);
+      border-radius: 28px;
+      overflow:hidden;
+      background: rgba(255,255,255,.86);
+      box-shadow: 0 18px 44px rgba(11,18,32,.12);
+    }
+    .wizHead{
+      padding: 16px 16px 12px;
+      border-bottom: 1px solid rgba(11,18,32,.06);
+      background:
+        radial-gradient(240px 110px at 18% 0%, rgba(110,190,255,.16), transparent 70%),
+        radial-gradient(240px 110px at 82% 0%, rgba(255,140,200,.16), transparent 70%),
+        rgba(255,255,255,.55);
+    }
+    .wizTitle{ font-weight: 950; font-size: 20px; margin:0; }
+    .wizSub{ margin-top:6px; color: rgba(11,18,32,.62); font-size: 13px; line-height:1.4; }
+    .wizContent{
+      padding: 14px 16px;
+      max-height: 64vh;
+      overflow-y:auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .wizFoot{
+      padding: 12px 16px 16px;
+      border-top: 1px solid rgba(11,18,32,.06);
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+    }
+    .stepPill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(11,18,32,.10);
+      background: rgba(11,18,32,.04);
+      font-size: 12px;
+      color: rgba(11,18,32,.65);
+      user-select:none;
+      white-space:nowrap;
+    }
+    .cards{ display:grid; grid-template-columns: 1fr; gap: 12px; }
+    .cardMini{
+      border: 1px solid rgba(11,18,32,.10);
+      border-radius: 22px;
+      background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.78));
+      box-shadow: 0 10px 26px rgba(11,18,32,.10);
+      padding: 14px 14px;
+    }
+    .cardMini h3{ margin:0 0 8px; font-size:14px; font-weight:950; }
+    .meta{ color: rgba(11,18,32,.62); font-size:12px; line-height:1.35; }
+    .table{
+      margin-top: 10px;
+      border-top: 1px solid rgba(11,18,32,.06);
+    }
+    .row{
+      display:grid;
+      grid-template-columns: 1.4fr .7fr .7fr .7fr .7fr .7fr;
+      gap: 8px;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(11,18,32,.06);
+      font-size: 12px;
+    }
+    .row.head{ font-weight: 950; color: rgba(11,18,32,.75); }
+    .row .r{ text-align:right; font-variant-numeric: tabular-nums; }
+    .muted{ color: rgba(11,18,32,.55); }
+  </style>
 </head>
 
 <body>
-  <div class="app">
-    <a href="index.html" class="menu-link" style="display:inline-block; margin-bottom:12px;">← Back</a>
-
-    <div class="box current" style="margin-bottom:12px;">
-      <div class="value">Analytics</div>
-      <div class="label">Local summary</div>
+  <div class="pageWrap">
+    <div class="backRow">
+      <a class="btn small ghost" href="index.html">← Back</a>
+      <div class="pill"><span>Analytics</span></div>
     </div>
 
-    <div class="box" style="margin-bottom:12px;">
-      <div class="value" id="sessionCount">0</div>
-      <div class="label">Sessions Logged</div>
-    </div>
+    <div class="wizShell">
+      <div class="wizHead">
+        <div class="wizTitle" id="wizTitle">Analytics</div>
+        <div class="wizSub" id="wizSub">Loading…</div>
+      </div>
 
-    <div class="box">
-      <div class="value" style="font-size:14px; font-weight:900; text-align:left;">Recent Sessions</div>
-      <pre id="recentSessions" style="margin:10px 0 0; white-space:pre-wrap; font-size:12px; color:#111;"></pre>
+      <div class="wizContent" id="wizContent"></div>
+
+      <div class="wizFoot">
+        <button class="btn ghost" id="wizBack">Back</button>
+        <div class="stepPill" id="wizStepPill">Step 1/1</div>
+        <button class="btn" id="wizNext">Next</button>
+      </div>
     </div>
   </div>
 
-  <script src="storage.js"></script>
-  <script src="engine.js"></script>
   <script src="analytics.js"></script>
 </body>
 </html>
