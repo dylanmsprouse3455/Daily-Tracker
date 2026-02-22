@@ -1,19 +1,27 @@
+// analytics.js (FULL) - wizard analytics: Today vs Avg, Yesterday vs Avg, plus breakdowns
 (() => {
   function fmtMin(n){
     if (typeof n !== "number" || !isFinite(n)) return "0.0";
     return n.toFixed(1);
   }
 
-  function fmtMoney(n){
-    if (typeof n !== "number" || !isFinite(n)) n = 0;
-    const sign = n >= 0 ? "+" : "-";
-    return sign + "$" + Math.abs(n).toFixed(2);
+  function dayKeyFromMs(ms){
+    const d = new Date(ms);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const da = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${da}`;
+  }
+
+  function todayKey(){ return dayKeyFromMs(Date.now()); }
+  function yesterdayKey(){
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return dayKeyFromMs(d.getTime());
   }
 
   function loadBrain(){
-    // Prefer Engine if available, because it ticks and stays current
     if (typeof Engine !== "undefined" && Engine.getState) return Engine.getState();
-
     try {
       const raw = localStorage.getItem("brain_state_v1");
       return raw ? JSON.parse(raw) : null;
@@ -22,200 +30,307 @@
     }
   }
 
-  function entries(obj){
-    return Object.entries(obj).sort((a,b)=>b[1]-a[1]);
+  function sessionsFromBrain(brain){
+    if (!brain) return [];
+    return Array.isArray(brain.sessions) ? brain.sessions : [];
   }
 
-  function aggByKey(sessions, key){
+  function normSession(s){
+    const a = s.active || {};
+    const startMs = typeof s.startMs === "number" ? s.startMs : null;
+    const dayKey = startMs ? dayKeyFromMs(startMs) : "unknown";
+    const durMin = typeof s.durationMin === "number" ? s.durationMin : 0;
+
+    const loc = a.location || null;
+    const mov = a.movement || null;
+    const acts = Array.isArray(a.activity) ? a.activity : [];
+
+    return { dayKey, startMs, durMin, loc, mov, acts };
+  }
+
+  function groupByDay(rawSessions){
+    const by = {};
+    for (const s of rawSessions){
+      const n = normSession(s);
+      if (!by[n.dayKey]) by[n.dayKey] = [];
+      by[n.dayKey].push(n);
+    }
+    return by;
+  }
+
+  function aggByKey(sessions, field){
     const t = {};
     for (const s of sessions){
-      const dur = (typeof s.durationMin === "number") ? s.durationMin : 0;
-      const a = s.active || {};
-      const v = a[key];
-      if (!v) continue;
-      t[v] = (t[v] || 0) + dur;
+      const k = s[field];
+      if (!k) continue;
+      t[k] = (t[k] || 0) + s.durMin;
     }
     return t;
   }
 
   function aggActivities(sessions){
     const t = {};
-    const impact = {};
     for (const s of sessions){
-      const dur = (typeof s.durationMin === "number") ? s.durationMin : 0;
-      const a = s.active || {};
-      const acts = Array.isArray(a.activity) ? a.activity : [];
-      const net = (s.delta && typeof s.delta.net === "number") ? s.delta.net : 0;
+      const acts = s.acts || [];
+      const dur = s.durMin || 0;
 
       if (acts.length){
-        const shareMin = dur / acts.length;
-        const shareNet = net / acts.length;
+        const share = dur / acts.length;
         for (const act of acts){
-          t[act] = (t[act] || 0) + shareMin;
-          impact[act] = (impact[act] || 0) + shareNet;
+          t[act] = (t[act] || 0) + share;
         }
       } else {
         t["(No Activity)"] = (t["(No Activity)"] || 0) + dur;
-        impact["(No Activity)"] = (impact["(No Activity)"] || 0) + net;
       }
     }
-    return { t, impact };
+    return t;
   }
 
-  function barText(mapObj, limit=10){
-    const e = entries(mapObj).slice(0, limit);
-    if (!e.length) return "No data yet.";
-    return e.map(([name, mins]) => `${name} — ${fmtMin(mins)} min`).join("\n");
-  }
-
-  function stepOverview(brain, sessions){
-    if (!brain) return "No data found yet.\n\nGo track for a minute on the main page and come back.";
-    return [
-      "===== OVERVIEW =====",
-      `Balance: $${(brain.balance || 0).toFixed(2)}`,
-      `Multiplier: ${(brain.multiplier || 1).toFixed(2)}x`,
-      `Streak: ${brain.streak || 0}`,
-      "",
-      `Day: ${brain.dayKey || "None"}`,
-      `Productive mins: ${fmtMin(brain.productiveMins || 0)}`,
-      `Relax mins: ${fmtMin(brain.relaxMins || 0)}`,
-      "",
-      `Sessions logged: ${sessions.length}`
-    ].join("\n");
-  }
-
-  function stepTopActivities(sessions){
-    if (!sessions.length) return "No sessions yet.";
-    const { t, impact } = aggActivities(sessions);
-    const top = entries(t).slice(0, 12);
-    return [
-      "===== TOP ACTIVITIES =====",
-      ...top.map(([name, mins]) => {
-        const net = impact[name] || 0;
-        return `${name} — ${fmtMin(mins)} min | ${fmtMoney(net)}`;
-      })
-    ].join("\n");
-  }
-
-  function stepLocations(sessions){
-    if (!sessions.length) return "No sessions yet.";
-    return "===== LOCATIONS =====\n" + barText(aggByKey(sessions, "location"), 12);
-  }
-
-  function stepMovements(sessions){
-    if (!sessions.length) return "No sessions yet.";
-    return "===== MOVEMENT =====\n" + barText(aggByKey(sessions, "movement"), 12);
-  }
-
-  function stepRecent(sessions){
-    if (!sessions.length) return "No sessions yet.";
-    const recent = sessions.slice(-25).reverse().map(s => {
-      const start = s.startMs ? new Date(s.startMs).toLocaleString() : "unknown";
-      const dur = (s.durationMin || 0).toFixed(2);
-      const a = s.active || {};
-      const loc = a.location || "None";
-      const mov = a.movement || "None";
-      const act = Array.isArray(a.activity) && a.activity.length ? a.activity.join(", ") : "None";
-      const net = (s.delta && typeof s.delta.net === "number") ? s.delta.net : 0;
-      return `${loc} | ${mov}\n${act}\n${dur} min | ${fmtMoney(net)}\n${start}\n`;
-    }).join("\n");
-    return "===== RECENT SESSIONS =====\n\n" + recent;
-  }
-
-  function stepExport(){
-    const raw = localStorage.getItem("brain_state_v1") || "";
-    return "===== EXPORT (RAW JSON) =====\n\n" + raw;
-  }
-
-  async function copyRawToClipboard(){
-    const raw = localStorage.getItem("brain_state_v1") || "";
-    if (!raw) return false;
-
-    try {
-      await navigator.clipboard.writeText(raw);
-      return true;
-    } catch {
-      // fallback: try selecting a temporary textarea (older Safari)
-      try {
-        const ta = document.createElement("textarea");
-        ta.value = raw;
-        ta.style.position = "fixed";
-        ta.style.left = "-9999px";
-        document.body.appendChild(ta);
-        ta.focus();
-        ta.select();
-        const ok = document.execCommand("copy");
-        ta.remove();
-        return ok;
-      } catch {
-        return false;
+  // average per day across days where the item appears (more useful than dividing by all days)
+  function avgPerDay(byDay, aggFn){
+    const days = Object.keys(byDay).filter(k => k !== "unknown");
+    const totals = {};
+    const counts = {};
+    for (const dk of days){
+      const m = aggFn(byDay[dk]);
+      for (const [k, v] of Object.entries(m)){
+        totals[k] = (totals[k] || 0) + v;
+        counts[k] = (counts[k] || 0) + 1;
       }
     }
+    const avg = {};
+    for (const k of Object.keys(totals)){
+      avg[k] = totals[k] / (counts[k] || 1);
+    }
+    return { avg, dayCount: days.length };
+  }
+
+  function mergeKeys(a,b,c){
+    const set = new Set();
+    for (const k of Object.keys(a||{})) set.add(k);
+    for (const k of Object.keys(b||{})) set.add(k);
+    for (const k of Object.keys(c||{})) set.add(k);
+    return Array.from(set);
+  }
+
+  function buildRows(todayMap, ydayMap, avgMap, limit=14){
+    const keys = mergeKeys(todayMap, ydayMap, avgMap);
+    keys.sort((x,y)=> (todayMap[y]||0) - (todayMap[x]||0));
+    const out = [];
+    for (const k of keys.slice(0, limit)){
+      const t = todayMap[k] || 0;
+      const y = ydayMap[k] || 0;
+      const a = avgMap[k] || 0;
+      out.push({
+        item: k,
+        today: t,
+        yday: y,
+        avg: a,
+        dAvg: t - a,
+        dY: t - y
+      });
+    }
+    return out;
+  }
+
+  function el(tag, cls){
+    const n = document.createElement(tag);
+    if (cls) n.className = cls;
+    return n;
+  }
+
+  function tableCard(title, subtitle, rows){
+    const c = el("div","cardMini");
+    const h = el("h3"); h.textContent = title;
+    const m = el("div","meta"); m.textContent = subtitle;
+
+    c.appendChild(h);
+    c.appendChild(m);
+
+    const table = el("div","table");
+    const head = el("div","row head");
+    head.innerHTML = `
+      <div>Item</div>
+      <div class="r">Today</div>
+      <div class="r">Yday</div>
+      <div class="r">Avg</div>
+      <div class="r">T-Avg</div>
+      <div class="r">T-Y</div>
+    `;
+    table.appendChild(head);
+
+    if (!rows.length){
+      const empty = el("div","meta");
+      empty.style.marginTop = "10px";
+      empty.textContent = "No data yet.";
+      c.appendChild(empty);
+      return c;
+    }
+
+    for (const r of rows){
+      const row = el("div","row");
+      const dAvg = r.dAvg >= 0 ? `+${fmtMin(r.dAvg)}` : `-${fmtMin(Math.abs(r.dAvg))}`;
+      const dY = r.dY >= 0 ? `+${fmtMin(r.dY)}` : `-${fmtMin(Math.abs(r.dY))}`;
+      row.innerHTML = `
+        <div>${r.item}</div>
+        <div class="r">${fmtMin(r.today)}</div>
+        <div class="r">${fmtMin(r.yday)}</div>
+        <div class="r">${fmtMin(r.avg)}</div>
+        <div class="r">${dAvg}</div>
+        <div class="r">${dY}</div>
+      `;
+      table.appendChild(row);
+    }
+
+    c.appendChild(table);
+    return c;
+  }
+
+  function overviewCard(brain, byDay){
+    const tk = todayKey();
+    const yk = yesterdayKey();
+    const todaySessions = byDay[tk] || [];
+    const ydaySessions = byDay[yk] || [];
+
+    const totalToday = todaySessions.reduce((a,s)=>a+(s.durMin||0), 0);
+    const totalYday = ydaySessions.reduce((a,s)=>a+(s.durMin||0), 0);
+    const dayCount = Object.keys(byDay).filter(k=>k!=="unknown").length;
+
+    const c = el("div","cardMini");
+    const h = el("h3"); h.textContent = "Overview";
+    const m = el("div","meta");
+    m.innerHTML = `
+      Days tracked: ${dayCount}<br/>
+      Today (${tk}): ${fmtMin(totalToday)} min<br/>
+      Yesterday (${yk}): ${fmtMin(totalYday)} min
+    `;
+    c.appendChild(h);
+    c.appendChild(m);
+
+    if (brain && typeof brain.balance === "number"){
+      const extra = el("div","meta");
+      extra.style.marginTop = "10px";
+      extra.innerHTML = `
+        Balance: $${brain.balance.toFixed(2)}<br/>
+        Multiplier: ${(brain.multiplier || 1).toFixed(2)}x<br/>
+        Streak: ${brain.streak || 0}
+      `;
+      c.appendChild(extra);
+    }
+
+    return c;
   }
 
   document.addEventListener("DOMContentLoaded", () => {
-    const stepCounter = document.getElementById("sessionCount");
-    const pre = document.getElementById("recentSessions");
-    if (!stepCounter || !pre) return;
-
-    // Inject controls into the same box
-    const box = pre.parentElement;
-
-    const controls = document.createElement("div");
-    controls.style.display = "flex";
-    controls.style.gap = "10px";
-    controls.style.marginTop = "12px";
-
-    const backBtn = document.createElement("button");
-    backBtn.textContent = "Back";
-    backBtn.className = "menu-link-btn";
-    backBtn.type = "button";
-
-    const nextBtn = document.createElement("button");
-    nextBtn.textContent = "Next";
-    nextBtn.className = "menu-link-btn";
-    nextBtn.type = "button";
-    nextBtn.style.background = "var(--blue)";
-    nextBtn.style.color = "white";
-    nextBtn.style.borderColor = "transparent";
-    nextBtn.style.fontWeight = "900";
-
-    controls.appendChild(backBtn);
-    controls.appendChild(nextBtn);
-    box.appendChild(controls);
+    const title = document.getElementById("wizTitle");
+    const sub = document.getElementById("wizSub");
+    const content = document.getElementById("wizContent");
+    const back = document.getElementById("wizBack");
+    const next = document.getElementById("wizNext");
+    const pill = document.getElementById("wizStepPill");
 
     const brain = loadBrain();
-    const sessions = brain && Array.isArray(brain.sessions) ? brain.sessions : [];
+    const rawSessions = sessionsFromBrain(brain);
+    const byDay = groupByDay(rawSessions);
+
+    const tk = todayKey();
+    const yk = yesterdayKey();
+    const todaySessions = byDay[tk] || [];
+    const ydaySessions = byDay[yk] || [];
+
+    const locToday = aggByKey(todaySessions, "loc");
+    const locY = aggByKey(ydaySessions, "loc");
+    const locAvg = avgPerDay(byDay, (ss)=>aggByKey(ss,"loc")).avg;
+
+    const movToday = aggByKey(todaySessions, "mov");
+    const movY = aggByKey(ydaySessions, "mov");
+    const movAvg = avgPerDay(byDay, (ss)=>aggByKey(ss,"mov")).avg;
+
+    const actToday = aggActivities(todaySessions);
+    const actY = aggActivities(ydaySessions);
+    const actAvg = avgPerDay(byDay, (ss)=>aggActivities(ss)).avg;
 
     const steps = [
-      { name: "Overview", render: () => stepOverview(brain, sessions) },
-      { name: "Top Activities", render: () => stepTopActivities(sessions) },
-      { name: "Locations", render: () => stepLocations(sessions) },
-      { name: "Movement", render: () => stepMovements(sessions) },
-      { name: "Recent", render: () => stepRecent(sessions) },
-      { name: "Export", render: () => stepExport() }
+      {
+        name: "Overview",
+        sub: "Today vs yesterday totals. Quick context.",
+        render: () => {
+          const wrap = el("div","cards");
+          wrap.appendChild(overviewCard(brain, byDay));
+          return wrap;
+        }
+      },
+      {
+        name: "Activities",
+        sub: "Today vs yesterday vs your all-time average per day.",
+        render: () => {
+          const rows = buildRows(actToday, actY, actAvg, 16);
+          const wrap = el("div","cards");
+          wrap.appendChild(tableCard("Activities", "Minutes per activity (shared if multiple).", rows));
+          return wrap;
+        }
+      },
+      {
+        name: "Locations",
+        sub: "Time by location: today vs yesterday vs average/day.",
+        render: () => {
+          const rows = buildRows(locToday, locY, locAvg, 14);
+          const wrap = el("div","cards");
+          wrap.appendChild(tableCard("Locations", "Minutes per location.", rows));
+          return wrap;
+        }
+      },
+      {
+        name: "Movement",
+        sub: "Time by movement: today vs yesterday vs average/day.",
+        render: () => {
+          const rows = buildRows(movToday, movY, movAvg, 14);
+          const wrap = el("div","cards");
+          wrap.appendChild(tableCard("Movement", "Minutes per movement mode.", rows));
+          return wrap;
+        }
+      },
+      {
+        name: "Export",
+        sub: "Raw JSON copy view.",
+        render: () => {
+          const wrap = el("div","cards");
+          const c = el("div","cardMini");
+          const h = el("h3"); h.textContent = "Export (raw)";
+          const m = el("div","meta"); m.textContent = "This is your local data.";
+          const pre = el("pre");
+          pre.style.whiteSpace = "pre-wrap";
+          pre.style.wordBreak = "break-word";
+          pre.style.margin = "10px 0 0";
+          pre.style.fontSize = "12px";
+          pre.textContent = localStorage.getItem("brain_state_v1") || "No raw data yet.";
+          c.appendChild(h); c.appendChild(m); c.appendChild(pre);
+          wrap.appendChild(c);
+          return wrap;
+        }
+      }
     ];
 
     let idx = 0;
 
     function paint(){
-      stepCounter.textContent = `Step ${idx+1} / ${steps.length}`;
-      pre.textContent = steps[idx].render();
+      title.textContent = steps[idx].name;
+      sub.textContent = steps[idx].sub;
+      content.innerHTML = "";
+      content.appendChild(steps[idx].render());
 
-      backBtn.disabled = idx === 0;
-      nextBtn.textContent = (idx === steps.length - 1) ? "Done (Copy)" : "Next";
+      pill.textContent = `Step ${idx+1}/${steps.length}`;
+      back.disabled = idx === 0;
+      next.textContent = (idx === steps.length - 1) ? "Done" : "Next";
     }
 
-    backBtn.addEventListener("click", () => {
+    back.addEventListener("click", () => {
       idx = Math.max(0, idx - 1);
       paint();
     });
 
-    nextBtn.addEventListener("click", async () => {
-      if (idx === steps.length - 1) {
-        const ok = await copyRawToClipboard();
-        // Keep it low-key but clear
-        if (!ok) alert("Couldn’t auto-copy. Open the Export step and copy manually.");
+    next.addEventListener("click", () => {
+      if (idx === steps.length - 1){
         window.location.href = "index.html";
         return;
       }
